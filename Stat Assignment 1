@@ -1,0 +1,217 @@
+---
+title: "DAPT 621 Assignment 1"
+author: Christopher Orrell, Christine Holzem, Christian Hennelly, Pipe Neddenien,
+  Abdul Jalil
+date: "9/12/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(plyr)
+library(qqplotr)
+Income_Data <- read.csv('C:/School Files/DAPT 621/Artsy Lawsuit.csv')
+Income_Data$Gender <- as.factor(Income_Data$Gender)
+mu <- ddply(Income_Data, "Gender", summarise, grp.mean=mean(Rate))
+```
+
+## Part 1
+
+### Question 1
+
+```{r histogram and qq plots, echo=FALSE}
+Histo_plot <- ggplot(Income_Data, aes(x = Rate, color = Gender, fill = Gender)) +
+  geom_histogram(aes(y = ..density..),alpha = 0.5, binwidth = 50) +
+  geom_density(alpha = .6) +
+  geom_vline(data = mu, aes(xintercept=grp.mean, color = Gender), linetype='dashed') +
+  labs(title = "Gender Pay Rate Histogram", x = 'Weekly Pay Rate($)', y = 'Count')
+
+QQ_plot <- ggplot(Income_Data, aes(sample = Rate, color = Gender, fill = Gender)) +
+  stat_qq_band(bandType = 'pointwise', alpha = 0.5) +
+  stat_qq_line() +
+  stat_qq_point() +
+  facet_wrap(~ Gender) +
+  labs(title = 'Gender Pay Rate QQ Plot', x = 'Theoretical Quantiles', y = 'Sample Quantile')
+```
+#### Histogram
+```{r, echo = FALSE, fig.align="center"}
+Histo_plot
+```
+
+In the histogram plot we observed that for women it was very right skewed with most falling in lower pay rates; while the men had a more bidmodal distribution which favored the upper end of the pay rates. The sample size for male employees is about half the sample size for female employees.   
+
+#### QQ Plots
+```{r QQ plots, echo = FALSE, fig.align="center"}
+QQ_plot
+```
+
+In the QQ plots we observed that pay rates by gender meandered about the regression line. We did observe some fanning in the tails of both plots, especially in the female plot. In the female plot the tails extend beyond the confidence bands, especially on the upper end. This we align with the distribution being more right skewed with a concentration on the lower pay rates. In both cases, the majority of the sample data point fall within the confidence interval bands. Therefore, the data can be said to have normal distribution with no severe deviations. 
+
+
+### Question 2
+
+```{r sample mean, echo=FALSE, fig.align="center"}
+mu
+```
+
+The average pay rate for women is $295.4 lower than that of men. The average female weekly pay rate is about 74% of the average male weekly pay rate.
+
+### Question 3
+
+```{r box plots, echo = FALSE}
+Box_plot <- ggplot(Income_Data, aes(x=Gender, y = Rate, fill = Gender)) +
+  geom_boxplot() +
+  labs(title = 'Gender Pay Rate Box Plot', x = "Gender", y = 'Weekly Pay Rate($)')
+Grade_Box <- ggplot(Income_Data, aes(x = Grade, y = Rate, group = Grade, color = Gender)) +
+  geom_boxplot() +
+  facet_wrap(~ Gender) +
+  labs(title = 'Grade v. Weekly Pay Rate($) by Gender Box Plot', x = "Grade", y = 'Weekly Pay Rate($)')
+```
+
+#### Box Plots
+```{r boxplot, echo=FALSE, fig.align="center"}
+Box_plot
+```
+
+This box plot shows that entire interquartile range for men is above that of women. The IQR for women is much more concentrated in the lower pay rates while the men's is more spread out over the lower weekly pay rate. Since the sample size for male employees is roughly half that of the females employees, we expect to see a wider confidence interval for the male employees. Resulting in 75% of men being paid more than 75% of women. There are some outliers in the female weekly pay rate data. 
+
+```{r boxplot2, echo=FALSE, fig.align="center"}
+Grade_Box
+```
+
+This box plot shows the pay rates broken down by pay grades and gender. We observed that around job grade 5 a disparity occurs; every subsequent grade after 5 the men make on average more than a woman within that grade. 
+
+
+### Question 4
+```{r t test, echo = FALSE}
+Male_Data <- Income_Data %>%
+  filter(Gender == 1)
+Female_Data <- Income_Data %>%
+  filter(Gender == 0)
+hypo_test <- t.test(Female_Data$Rate,Male_Data$Rate)
+```
+
+#### t-test
+```{r t test present, echo=FALSE, fig.align="center"}
+hypo_test
+```
+**Test statistic**: `r round(hypo_test$statistic, digits = 3)`\
+**p-value**: `r hypo_test$p.value`\
+**Conclusion**: With a  p-value that small there is suffiecient evidence to say the variable is statistically significant at a confidence level of 95%, even at the 99% level. Along with the upper and lower ends of the confidence intervals not including zero we must reject the null hypothesis that there is no difference and infer that there is a difference in weekly pay rate due to gender.  
+
+
+## Part 2
+
+### Question 1
+```{r scatter plots, echo=FALSE}
+Scatter_Plot <- ggplot(Income_Data, aes(x = Grade, y = Rate)) +
+  geom_point() +
+  geom_smooth(method = lm) +
+  labs(title = 'Weekly Pay Rate($) v Pay Grade', x = 'Job Grade', y = 'Weekly Pay Rate($)')
+Scatter_by_Gender <- ggplot(Income_Data, aes(x = Grade, y = Rate, color = Gender)) +
+  geom_point() +
+  geom_smooth(method = lm) +
+  labs(title = 'Weekly Pay Rate($) v Pay Grade', x = 'Job Grade', y = 'Weekly Pay Rate($)')
+```
+
+#### Scatter Plot 1
+```{r scatter plot 1, echo=FALSE, fig.align="center"}
+Scatter_Plot
+```
+
+The scatter plot clearly shows a positive relationship between Job Grade and Pay Rate; as grade increases, so does pay rate. The plot indicates the variance to the mean mean shows a slight increases at the upper end of the job grade range.
+
+#### Scatter Plot 2
+```{r scatter plot 2, echo=FALSE, fig.align="center"}
+Scatter_by_Gender
+```
+
+However, if you group by gender the positive relationship is steeper for men than for women.
+
+
+### Question 2
+```{r linear regression, echo=FALSE,fig.align="center"}
+linearMod <- lm(Rate ~ Grade, data = Income_Data)
+summary(linearMod)
+```
+#### a. 
+Regression equation: $\hat{y}$ = `r round(coef(linearMod)['(Intercept)'], digits = 2)` + `r round(coef(linearMod)['Grade'], digits = 2)`x
+That means that at Job Grade 0 the base pay is `r round(coef(linearMod)['(Intercept)'], digits = 2)`. For the slope that means for every job grade increase the pay rate increases by `r round(coef(linearMod)['Grade'], digits = 2)`
+
+#### b. 
+Added in the plot from question 1.
+
+
+### Question 3
+$r^{2}$: `r round(summary(linearMod)$r.squared, digits = 2)`
+The coefficient of determination indicates that `r round(summary(linearMod)$r.squared *100, digits = 2)`% of the proportion of the variance in the weekly rate is explained by grade. 
+
+
+### Question 4
+```{r residual plots, echo=FALSE}
+plot(linearMod$residuals)
+Income_Data$predicted <- predict(linearMod)
+Income_Data$residuals <- residuals(linearMod)
+Regression_QQ <- ggplot(Income_Data, aes(sample = residuals)) +
+  stat_qq_band(bandType = 'pointwise', alpha = .5) +
+  stat_qq_line() +
+  stat_qq_point() +
+  labs(title = 'Residuals QQ Plot', x = 'Theoretical Quantiles', y = 'Residuals')
+Residual_v_Fitted <- ggplot(Income_Data, aes(y = linearMod$residuals, x = linearMod$fitted.values)) +
+  geom_point() +
+  geom_smooth(method = loess) +
+  geom_hline(yintercept = 0, linetype='dashed')
+  labs(title = 'Residuals v. Fitted', x = 'Fitted Values', y = 'Residuals')
+```
+#### a.
+We see above that the residuals show no clear pattern which is good sign for these variables. 
+
+```{r residual v fitted, echo=FALSE, fig.align="center"}
+Residual_v_Fitted
+```
+
+Looking at the residuals versus fitted, linearity somewhat holds. The outliers on the upward end seem to skew the data, which could mean that we are missing something explanatory with these two variables.
+
+There are 5 assumptions to check for regression.\
+
+**Assumption#1**: Independent variable, Grade in this case, is known and fixed –
+we are told this.\
+
+**Assumption #2**: Residuals are independent – we are told to assume this for this
+course.\
+
+**Assumption #3 and #4**: Linear model is appropriate and variability of Rate
+about the regression line is constant. Check the plot of residuals vs predicted
+values below. The residuals plot shows roughly a normal distribution in the
+histogram associated with the plot. There is a bit of heteroskedasticity as the
+rate increases, that the variance grows a bit larger at the high end of the weekly
+rates range.  That also shows up in the associated histogram as a slight skew. We do observe that a slight curve might fit that residuals vs predicted plot.
+However, for this exercise it is probably appropriate to assume normal distribution and
+constant variability, therefore the use of a linear model is appropriate.\
+
+#### b.
+```{r residual QQ, echo=FALSE, fig.align="center"}
+Regression_QQ
+```
+
+Here we can see that data mostly falls with acceptable range. There is a bit a variability in the higher ranges.\ 
+
+**Assumption #5**: Residuals are normal distribution. The data observed
+meanders along the regression line and stays mostly within the confidence
+bands. Therefore, we can assume the residuals are normal distribution.
+
+### Question 5
+```{r regression model, echo=FALSE, fig.align="center"}
+summary(linearMod)
+confidence_int <- confint(linearMod, 'Grade', level = 0.95)
+```
+**test statistic**:`r summary(linearMod)$coefficients[2,3]`\
+**p-value**: `r summary(linearMod)$coefficients[2,4]`\
+**confidence intervals**: `r confidence_int`\
+**Conclusion**: Looking at these statistics there is enough evidence to reject the null hypothesisthat that the slope is zero; because the p-value is extremely small compared to any confidence level, the regression analysis shows an estimate for grade not to be zero, the slope to be greater than zero, and the confidence interval does not include zero. Therefore, grade is a predictor of weekly pay rate.
+
+
