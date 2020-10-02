@@ -1,0 +1,104 @@
+library(readr)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(plyr)
+library(qqplotr)
+
+# load data
+Income_Data_Old <- read.csv('O:/Operations/Chris Orrell/School Files/Artsy Lawsuit.csv')
+Income_Data <- read.csv('O:/Operations/Chris Orrell/School Files/Artsy Lawsuit.csv')
+Income_Data$Gender <- as.factor(Income_Data$Gender)
+Income_Data$Grade <- as.factor(Income_Data$Grade)
+
+# 1 
+# box plot by grade/gender
+Grade_Box <- ggplot(Income_Data, aes(x = Grade, y = Rate)) +
+  geom_boxplot(aes(fill = Gender)) +
+  labs(title = 'Grade v. Weekly Pay Rate($) by Gender Box Plot', x = "Grade", y = 'Weekly Pay Rate($)')
+
+# create data subsets and hypothesis tests for each gender by grade
+Male_Data_G1 <- Income_Data %>%
+  filter(Gender == 1 & Grade == 1)
+Female_Data_G1 <- Income_Data %>%
+  filter(Gender == 0 & Grade == 1)
+Male_Data_G2 <- Income_Data %>%
+  filter(Gender == 1 & Grade == 2)
+Female_Data_G2 <- Income_Data %>%
+  filter(Gender == 0 & Grade == 2)
+Male_Data_G3 <- Income_Data %>%
+  filter(Gender == 1 & Grade == 3)
+Female_Data_G3 <- Income_Data %>%
+  filter(Gender == 0 & Grade == 3)
+Male_Data_G4 <- Income_Data %>%
+  filter(Gender == 1 & Grade == 4)
+Female_Data_G4 <- Income_Data %>%
+  filter(Gender == 0 & Grade == 4)
+Male_Data_G5 <- Income_Data %>%
+  filter(Gender == 1 & Grade == 5)
+Female_Data_G5 <- Income_Data %>%
+  filter(Gender == 0 & Grade == 5)
+Male_Data_G6 <- Income_Data %>%
+  filter(Gender == 1 & Grade == 6)
+Female_Data_G6 <- Income_Data %>%
+  filter(Gender == 0 & Grade == 6)
+Male_Data_G7 <- Income_Data %>%
+  filter(Gender == 1 & Grade == 7)
+Female_Data_G7 <- Income_Data %>%
+  filter(Gender == 0 & Grade == 7)
+Male_Data_G8 <- Income_Data %>%
+  filter(Gender == 1 & Grade == 8)
+Female_Data_G8 <- Income_Data %>%
+  filter(Gender == 0 & Grade == 8)
+hypo_test_G1 <- t.test(Female_Data_G1$Rate,Male_Data_G1$Rate)
+hypo_test_G2 <- t.test(Female_Data_G2$Rate,Male_Data_G2$Rate)
+hypo_test_G3 <- t.test(Female_Data_G3$Rate,Male_Data_G3$Rate)
+hypo_test_G4 <- t.test(Female_Data_G4$Rate,Male_Data_G4$Rate)
+hypo_test_G5 <- t.test(Female_Data_G5$Rate,Male_Data_G5$Rate)
+hypo_test_G6 <- t.test(Female_Data_G6$Rate,Male_Data_G6$Rate)
+hypo_test_G7 <- t.test(Female_Data_G7$Rate,Male_Data_G7$Rate)
+hypo_test_G8 <- t.test(Female_Data_G8$Rate,Male_Data_G8$Rate)
+# should be missing G1 & G2 not enough male data
+
+#2
+linearMod <- lm(Rate ~ Grade, data = Income_Data_Old)
+summary(linearMod)
+# Grade accounts for 76% of the variability. It makes the Grade appear very significant in the pay differences.
+# I think this helps the Artsy Company. If they are able to make a case that the differences in pay is mostly explained by the differences in Job Grade rather than gender it could muddy the waters enough for them to win the case
+
+#3
+Female_Data <- Income_Data %>%
+  filter(Gender == 0)
+Male_Data <- Income_Data %>%
+  filter(Gender == 1)
+Hypo_Test <- t.test(Female_Data$TimeInGrade,Male_Data$TimeInGrade)
+Hypo_Test
+# Here we can see based on the hypothesis test that with a 95% confidence interval that doesn't include 0 and a very small p-value that the differences in Time in Grade by Gender is significant
+# There is enough evidence to reject the null hypothesis
+
+#4
+#create multiple regression
+mlm <- lm(Rate ~ Grade + TimeInGrade, data = Income_Data_Old) 
+
+#a anova f test
+mlmaov <- anova(mlm)
+summary(mlmaov)
+#b explains 81% of the variability
+
+#c 
+# Residuals v predict
+Residual_v_Fitted <- ggplot(Income_Data_Old, aes(y = mlm$residuals, x = mlm$fitted.values)) +
+  geom_point() +
+  geom_smooth(method = loess) +
+  labs(title = 'Residuals v. Fitted', x = 'Fitted Values', y = 'Residuals')
+# qq plot
+Income_Data_Old$predicted <- predict(mlm)
+Income_Data_Old$residuals <- residuals(mlm)
+Regression_QQ <- ggplot(Income_Data_Old, aes(sample = residuals)) +
+  stat_qq_band(bandType = 'pointwise', alpha = .5) +
+  stat_qq_line() +
+  stat_qq_point() +
+  labs(title = 'Residuals QQ Plot', x = 'Theoretical Quantiles', y = 'Residuals')
+
+# d
+summary(mlm)
