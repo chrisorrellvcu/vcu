@@ -1,23 +1,34 @@
+---
+title: "Assignment 2"
+author: "Christopher Orrell"
+date: "10/5/2020"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
 library(readr)
 library(tidyr)
 library(dplyr)
 library(ggplot2)
 library(plyr)
 library(qqplotr)
-
-# load data
+# Load Data
 Income_Data_Old <- read.csv('O:/Operations/Chris Orrell/School Files/Artsy Lawsuit.csv')
 Income_Data <- read.csv('O:/Operations/Chris Orrell/School Files/Artsy Lawsuit.csv')
 Income_Data$Gender <- as.factor(Income_Data$Gender)
 Income_Data$Grade <- as.factor(Income_Data$Grade)
+```
 
-# 1 
-# box plot by grade/gender
+
+## Question 1
+```{r box plot and hypo tests, echo=FALSE}
+# Box plot for reference 
 Grade_Box <- ggplot(Income_Data, aes(x = Grade, y = Rate)) +
   geom_boxplot(aes(fill = Gender)) +
   labs(title = 'Grade v. Weekly Pay Rate($) by Gender Box Plot', x = "Grade", y = 'Weekly Pay Rate($)')
 
-# create data subsets and hypothesis tests for each gender by grade
+# Create data subsets and hypothesis tests for each gender by grade
 Male_Data_G1 <- Income_Data %>%
   filter(Gender == 1 & Grade == 1)
 Female_Data_G1 <- Income_Data %>%
@@ -50,42 +61,64 @@ Male_Data_G8 <- Income_Data %>%
   filter(Gender == 1 & Grade == 8)
 Female_Data_G8 <- Income_Data %>%
   filter(Gender == 0 & Grade == 8)
-hypo_test_G1 <- t.test(Female_Data_G1$Rate,Male_Data_G1$Rate)
-hypo_test_G2 <- t.test(Female_Data_G2$Rate,Male_Data_G2$Rate)
 hypo_test_G3 <- t.test(Female_Data_G3$Rate,Male_Data_G3$Rate)
 hypo_test_G4 <- t.test(Female_Data_G4$Rate,Male_Data_G4$Rate)
 hypo_test_G5 <- t.test(Female_Data_G5$Rate,Male_Data_G5$Rate)
 hypo_test_G6 <- t.test(Female_Data_G6$Rate,Male_Data_G6$Rate)
 hypo_test_G7 <- t.test(Female_Data_G7$Rate,Male_Data_G7$Rate)
 hypo_test_G8 <- t.test(Female_Data_G8$Rate,Male_Data_G8$Rate)
-# should be missing G1 & G2 not enough male data
+```
 
-#2
+###Grade 3
+ConF. Interval:`r hypo_tes_G3t$conf.int`\
+p-value:`r hypo_tes_G3t$p.value`\
+###Grade 4
+ConF. Interval:`r hypo_tes_G4t$conf.int`\
+p-value:`r hypo_tes_G4t$p.value`\
+###Grade 5
+ConF. Interval:`r hypo_tes_G5t$conf.int`\
+p-value:`r hypo_tes_G5t$p.value`\
+###Grade 6
+ConF. Interval:`r hypo_tes_G6t$conf.int`\
+p-value:`r hypo_tes_G6t$p.value`\
+###Grade 7
+ConF. Interval:`r hypo_tes_G7t$conf.int`\
+p-value:`r hypo_tes_G7t$p.value`\
+###Grade 8
+ConF. Interval:`r hypo_tes_G8t$conf.int`\
+p-value:`r hypo_tes_G8t$p.value`\
+
+**Conclusion**: There was no male data for grades 1 & 2 so we cannot test a hypothesis for them. Looking at the confidence intervals for grades 3-5 & 8, all include zero with a p-value that greater than 0.05. We can conclude that the difference in pay is not statistically significant based on sex within those grades. Grades 6 & 7 show a different result, here we can see that the confidence intervals do not contain zero and the p-value is below the typical threshold of 0.05. We can conclude that the true difference in the means for grades 6 & 7 is not equal to 0. The following box plot demonstrates the data:
+
+
+```{r, echo = FALSE, fig.align="center"}
+Grade_Box
+```
+
+## Question 2
+```{r, echo=FALSE}
 linearMod <- lm(Rate ~ Grade, data = Income_Data_Old)
 summary(linearMod)
-# Grade accounts for 76% of the variability. It makes the Grade appear very significant in the pay differences.
-# I think this helps the Artsy Company. If they are able to make a case that the differences in pay is mostly explained by the differences in Job Grade rather than gender it could muddy the waters enough for them to win the case
+```
 
-#3
+In this simple linear regression from the last assignment we can see grade accounts for 76% of the variability, referencing to $r^{2}$. This measure makes the grade appear very significant in terms of the pay differences.I think this helps the Artsy Company. If they are able to make a case that the differences in pay is mostly explained by the differences in job grade rather than gender alone it could muddy the waters enough for them to swing the decision in their favor.
+
+## Question 3
+```{r gender hypo, echo = FALSE}
 Female_Data <- Income_Data %>%
   filter(Gender == 0)
 Male_Data <- Income_Data %>%
   filter(Gender == 1)
 Hypo_Test <- t.test(Female_Data$TimeInGrade,Male_Data$TimeInGrade)
 Hypo_Test
-# Here we can see based on the hypothesis test that with a 95% confidence interval that doesn't include 0 and a very small p-value that the differences in Time in Grade by Gender is significant
-# There is enough evidence to reject the null hypothesis
+```
 
-#4
-#create multiple regression
+Here we can see based on the hypothesis test that with a 95% confidence interval that doesn't include 0 and a very small p-value that the differences in Time in Grade by Gender is significant. There is enough evidence to reject the null hypothesis that there is no difference in the means.
+
+## Question 4
+```{r multi-regression, echo=FALSE}
 mlm <- lm(Rate ~ Grade + TimeInGrade, data = Income_Data_Old) 
-
-#a anova f test
 mlmaov <- anova(mlm)
-summary(mlmaov)
-#b explains 81% of the variability
-
-#c 
 # Residuals v predict
 Residual_v_Fitted <- ggplot(Income_Data_Old, aes(y = mlm$residuals, x = mlm$fitted.values)) +
   geom_point() +
@@ -99,6 +132,35 @@ Regression_QQ <- ggplot(Income_Data_Old, aes(sample = residuals)) +
   stat_qq_line() +
   stat_qq_point() +
   labs(title = 'Residuals QQ Plot', x = 'Theoretical Quantiles', y = 'Residuals')
+```
 
-# d
+### A
+```{r anova f test, echo=FALSE}
+mlmaov
+```
+
+This test shows that both grade in the presence of time in grade and the reverse are both significant. This indicates that both variables are suitable to use in our multi-regression model.
+
+### B
+Looking at the model we see that $r^{2}$ explains :`r round(summary(mlm)$adj.r.squared *100, digits = 2`% of the variability.
+
+### C
+```{r residual diag, echo = FALSE,  fig.align="center"}
+Residual_v_Fitted
+```
+
+```{r residual diag2, echo = FALSE,  fig.align="center"}
+Regression_QQ
+```
+
+### D
+```{r multi-reg model, echo=FALSE}
 summary(mlm)
+```
+
+**Null Hypothesis**: The slopes for grade and time in grade are zero.\
+**Test Statistics**: Grade - `r summary(mlm)$coefficients[2,3]`, Time in Grade - `r summary(mlm)$coefficients[3,3]`\
+**p-values**:Grade - `r summary(mlm)$coefficients[2,4]`, Time in Grade - `r summary(mlm)$coefficients[3,4]`\
+**Conclusion**: We have enough evidence to reject the null hypothesis that the slopes for both grade and time in grade are zero.\
+
+This will help our clients show that `r round(summary(mlm)$adj.r.squared *100, digits = 2`% of the variability in pay rate is explained by grade and time in grade. The plaintiffs could attack it by stating that we didn't run a multi-regression model with gender included and did not run the appropriate tests to exclude that variable. They could also bring up the fact that in two job grades the mean pay rate between the genders was not equal zero. We showed this in question 1.
