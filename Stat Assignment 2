@@ -1,7 +1,8 @@
 ---
 title: "Assignment 2"
-author: "Christopher Orrell"
-date: "10/5/2020"
+author: Christopher Orrell, Christine Holzmen, Christian Hennely, Piper Neddenien,
+  Abdul Jalil
+date: "10/6/2020"
 output: pdf_document
 ---
 
@@ -14,8 +15,8 @@ library(ggplot2)
 library(plyr)
 library(qqplotr)
 # Load Data
-Income_Data_Old <- read.csv('O:/Operations/Chris Orrell/School Files/Artsy Lawsuit.csv')
-Income_Data <- read.csv('O:/Operations/Chris Orrell/School Files/Artsy Lawsuit.csv')
+Income_Data_Old <- read.csv('C:/School Files/DAPT 621/Stat/Artsy Lawsuit.csv')
+Income_Data <- read.csv('C:/School Files/DAPT 621/Stat/Artsy Lawsuit.csv')
 Income_Data$Gender <- as.factor(Income_Data$Gender)
 Income_Data$Grade <- as.factor(Income_Data$Grade)
 ```
@@ -69,24 +70,24 @@ hypo_test_G7 <- t.test(Female_Data_G7$Rate,Male_Data_G7$Rate)
 hypo_test_G8 <- t.test(Female_Data_G8$Rate,Male_Data_G8$Rate)
 ```
 
-###Grade 3
-ConF. Interval:`r hypo_tes_G3t$conf.int`\
-p-value:`r hypo_tes_G3t$p.value`\
-###Grade 4
-ConF. Interval:`r hypo_tes_G4t$conf.int`\
-p-value:`r hypo_tes_G4t$p.value`\
-###Grade 5
-ConF. Interval:`r hypo_tes_G5t$conf.int`\
-p-value:`r hypo_tes_G5t$p.value`\
-###Grade 6
-ConF. Interval:`r hypo_tes_G6t$conf.int`\
-p-value:`r hypo_tes_G6t$p.value`\
-###Grade 7
-ConF. Interval:`r hypo_tes_G7t$conf.int`\
-p-value:`r hypo_tes_G7t$p.value`\
-###Grade 8
-ConF. Interval:`r hypo_tes_G8t$conf.int`\
-p-value:`r hypo_tes_G8t$p.value`\
+**Grade 3**
+ConF. Interval:`r hypo_test_G3$conf.int`\
+p-value:`r hypo_test_G3$p.value`\
+**Grade 4**
+ConF. Interval:`r hypo_test_G4$conf.int`\
+p-value:`r hypo_test_G4$p.value`\
+**Grade 5**
+ConF. Interval:`r hypo_test_G5$conf.int`\
+p-value:`r hypo_test_G5$p.value`\
+**Grade 6**
+ConF. Interval:`r hypo_test_G6$conf.int`\
+p-value:`r hypo_test_G6$p.value`\
+**Grade 7**
+ConF. Interval:`r hypo_test_G7$conf.int`\
+p-value:`r hypo_test_G7$p.value`\
+**Grade 8**
+ConF. Interval:`r hypo_test_G8$conf.int`\
+p-value:`r hypo_test_G8$p.value`\
 
 **Conclusion**: There was no male data for grades 1 & 2 so we cannot test a hypothesis for them. Looking at the confidence intervals for grades 3-5 & 8, all include zero with a p-value that greater than 0.05. We can conclude that the difference in pay is not statistically significant based on sex within those grades. Grades 6 & 7 show a different result, here we can see that the confidence intervals do not contain zero and the p-value is below the typical threshold of 0.05. We can conclude that the true difference in the means for grades 6 & 7 is not equal to 0. The following box plot demonstrates the data:
 
@@ -142,7 +143,7 @@ mlmaov
 This test shows that both grade in the presence of time in grade and the reverse are both significant. This indicates that both variables are suitable to use in our multi-regression model.
 
 ### B
-Looking at the model we see that $r^{2}$ explains :`r round(summary(mlm)$adj.r.squared *100, digits = 2`% of the variability.
+Looking at the model we see that $r^{2}$ explains `r round(summary(mlm)$adj.r.squared *100, digits = 2)`% of the variability.
 
 ### C
 ```{r residual diag, echo = FALSE,  fig.align="center"}
@@ -163,4 +164,4 @@ summary(mlm)
 **p-values**:Grade - `r summary(mlm)$coefficients[2,4]`, Time in Grade - `r summary(mlm)$coefficients[3,4]`\
 **Conclusion**: We have enough evidence to reject the null hypothesis that the slopes for both grade and time in grade are zero.\
 
-This will help our clients show that `r round(summary(mlm)$adj.r.squared *100, digits = 2`% of the variability in pay rate is explained by grade and time in grade. The plaintiffs could attack it by stating that we didn't run a multi-regression model with gender included and did not run the appropriate tests to exclude that variable. They could also bring up the fact that in two job grades the mean pay rate between the genders was not equal zero. We showed this in question 1.
+This will help our clients show that `r round(summary(mlm)$adj.r.squared *100, digits = 2)`% of the variability in pay rate is explained by grade and time in grade. The plaintiffs could attack it by stating that we didn't run a multi-regression model with gender included and did not run the appropriate tests to exclude that variable. They could also bring up the fact that in two job grades the mean pay rate between the genders was not equal zero. We showed this in question one.
