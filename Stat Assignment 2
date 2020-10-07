@@ -102,7 +102,7 @@ linearMod <- lm(Rate ~ Grade, data = Income_Data_Old)
 summary(linearMod)
 ```
 
-In this simple linear regression from the last assignment we can see grade accounts for 76% of the variability, referencing to $r^{2}$. This measure makes the grade appear very significant in terms of the pay differences.I think this helps the Artsy Company. If they are able to make a case that the differences in pay is mostly explained by the differences in job grade rather than gender alone it could muddy the waters enough for them to swing the decision in their favor.
+In this simple linear regression from the last assignment we can see grade accounts for 77% of the variability, referencing to $r^{2}$. This measure makes the grade appear very significant in terms of the pay differences.I think this helps the Artsy Company. If they are able to make a case that the differences in pay is mostly explained by the differences in job grade rather than gender alone it could muddy the waters enough for them to swing the decision in their favor.
 
 ## Question 3
 ```{r gender hypo, echo = FALSE}
@@ -146,11 +146,9 @@ This test shows that both grade in the presence of time in grade and the reverse
 Looking at the model we see that $r^{2}$ explains `r round(summary(mlm)$adj.r.squared *100, digits = 2)`% of the variability.
 
 ### C
-```{r residual diag, echo = FALSE,  fig.align="center"}
+```{r,echo=FALSE, out.width='.49\\linewidth', fig.width=3, fig.height=3,fig.show='hold',fig.align='center'}
+par(mar = c(4, 4, .1, .1))
 Residual_v_Fitted
-```
-
-```{r residual diag2, echo = FALSE,  fig.align="center"}
 Regression_QQ
 ```
 
@@ -160,8 +158,8 @@ summary(mlm)
 ```
 
 **Null Hypothesis**: The slopes for grade and time in grade are zero.\
-**Test Statistics**: Grade - `r summary(mlm)$coefficients[2,3]`, Time in Grade - `r summary(mlm)$coefficients[3,3]`\
-**p-values**:Grade - `r summary(mlm)$coefficients[2,4]`, Time in Grade - `r summary(mlm)$coefficients[3,4]`\
+**Test Statistics**: Grade -> `r summary(mlm)$coefficients[2,3]`, Time in Grade -> `r summary(mlm)$coefficients[3,3]`\
+**p-values**:Grade -> `r summary(mlm)$coefficients[2,4]`, Time in Grade -> `r summary(mlm)$coefficients[3,4]`\
 **Conclusion**: We have enough evidence to reject the null hypothesis that the slopes for both grade and time in grade are zero.\
 
 This will help our clients show that `r round(summary(mlm)$adj.r.squared *100, digits = 2)`% of the variability in pay rate is explained by grade and time in grade. The plaintiffs could attack it by stating that we didn't run a multi-regression model with gender included and did not run the appropriate tests to exclude that variable. They could also bring up the fact that in two job grades the mean pay rate between the genders was not equal zero. We showed this in question one.
