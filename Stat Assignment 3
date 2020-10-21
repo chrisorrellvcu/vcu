@@ -1,0 +1,30 @@
+library(readr)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(plyr)
+library(qqplotr)
+
+# load data
+Income_Data <- read.csv('O:/Operations/Chris Orrell/School Files/Artsy Lawsuit.csv')
+Income_Data$Gender <- as.factor(Income_Data$Gender)
+Income_Data$Grade <- as.factor(Income_Data$Grade)
+
+# create multi-regression model
+mlm <- lm(Rate ~ Grade + Gender + TimeInGrade, data = Income_Data)
+
+# anova test
+a_test <- anova(mlm)
+
+# Residuals v predict
+Residual_v_Fitted <- ggplot(Income_Data, aes(y = mlm$residuals, x = mlm$fitted.values)) +
+  geom_point() +
+  geom_smooth(method = loess) +
+  labs(title = 'Residuals v. Fitted', x = 'Fitted Values', y = 'Residuals')
+
+# QQ plot
+Regression_QQ <- ggplot(Income_Data, aes(sample = mlm$residuals)) +
+  stat_qq_band(bandType = 'pointwise', alpha = .5) +
+  stat_qq_line() +
+  stat_qq_point() +
+  labs(title = 'Residuals QQ Plot', x = 'Theoretical Quantiles', y = 'Residuals')
