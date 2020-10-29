@@ -32,6 +32,7 @@ summary(mlm)
 a_test <- anova(mlm)
 a_test
 ```
+In this anova table we see that all variables are significant in the presence of the others. This is shown by the relatively high F values and the very small p-values. We can conclude that these variables are good canadiates for our multiple linear regression model.
 
 ## C
 
@@ -61,3 +62,5 @@ Regression_QQ
 Looking at these residual plots it seems that our linear model assumptions are satisfied. The residual v fitted plot show a small amount of fanning but not enough to warrant a natural log transformation. The QQ plot looks satisfactory, the values meander about the reference line with only a small departure in the upper tail. 
 
 ## E
+
+We can see that all of our variables are statistically significant at 95% confidence level for the multiple-regression model, this is indicated by all of the p-values falling below the 0.05 threshold. We can see that the different grades have the largest overall impact on pay rate, monetarily speaking, while holding all other variables constant. This is particularly prevalent in the higher grades. The model's default categorical variable for gender is 0, so if we look at the gender output we can see that the model estimates that males make on average $46.89 more than females, holding all other variables constant. This is not as large as some of the grade impacts but according to our p-value metrics it is still largely consequential. 
