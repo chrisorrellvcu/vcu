@@ -1,30 +1,63 @@
+---
+title: "DAPT 621 - Assignment 1 Part 1"
+author: "Christopher Orrell"
+date: "10/29/2020"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
 library(readr)
 library(tidyr)
 library(dplyr)
 library(ggplot2)
 library(plyr)
 library(qqplotr)
-
 # load data
 Income_Data <- read.csv('O:/Operations/Chris Orrell/School Files/Artsy Lawsuit.csv')
 Income_Data$Gender <- as.factor(Income_Data$Gender)
 Income_Data$Grade <- as.factor(Income_Data$Grade)
+```
 
+## A
+```{r regression model, echo = FALSE}
 # create multi-regression model
 mlm <- lm(Rate ~ Grade + Gender + TimeInGrade, data = Income_Data)
+summary(mlm)
+```
 
+## B
+```{r anova table, echo = FALSE}
 # anova test
 a_test <- anova(mlm)
+a_test
+```
 
+## C
+
+Looking at the model we see that $r^{2}$ explains :`r round(summary(mlm)$adj.r.squared *100, digits = 2)`% of the variability. I conclude that the fit of this model and the variables included are satisfactory to explain the a good majority of the variability in pay rate. If we add more variables to this linear model we run the risk of over-fitting and artificially inflating $r^{2}$.
+
+## D
+
+```{r residual dia plot, echo = FALSE}
 # Residuals v predict
 Residual_v_Fitted <- ggplot(Income_Data, aes(y = mlm$residuals, x = mlm$fitted.values)) +
   geom_point() +
   geom_smooth(method = loess) +
   labs(title = 'Residuals v. Fitted', x = 'Fitted Values', y = 'Residuals')
-
 # QQ plot
 Regression_QQ <- ggplot(Income_Data, aes(sample = mlm$residuals)) +
   stat_qq_band(bandType = 'pointwise', alpha = .5) +
   stat_qq_line() +
   stat_qq_point() +
   labs(title = 'Residuals QQ Plot', x = 'Theoretical Quantiles', y = 'Residuals')
+```
+```{r,echo=FALSE, out.width='.49\\linewidth', fig.width=3, fig.height=3,fig.show='hold',fig.align='center'}
+par(mar = c(4, 4, .1, .1))
+Residual_v_Fitted
+Regression_QQ
+```
+
+Looking at these residual plots it seems that our linear model assumptions are satisfied. The residual v fitted plot show a small amount of fanning but not enough to warrant a natural log transformation. The QQ plot looks satisfactory, the values meander about the reference line with only a small departure in the upper tail. 
+
+## E
