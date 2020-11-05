@@ -1,7 +1,7 @@
 library(dplyr)
 library(lubridate)
 
-(col_names <- make.names(scan("VCU_Class_PO_fis19.csv",
+(col_names <- make.names(scan("VCU_Class_PO_fis18.csv",
                               what="character",
                               nlines=1,
                               sep=",")))
@@ -21,33 +21,33 @@ numeric_cols <- c("Unit.Price",
                   "Quantity.Ordered",
                   "Total.Cost",
                   "Total.Cost.Change")
-my_col_classes <- rep("character",29)
+my_col_classes <- rep("character",33)
 my_col_classes[col_names %in% factor_cols] <- "factor"
 my_col_classes[col_names %in% numeric_cols] <- "numeric"
 my_col_classes
 
-eva_2019 <- read.table("VCU_Class_PO_fis19.csv",
+eva_2018 <- read.table("VCU_Class_PO_fis18.csv",
                        colClasses = my_col_classes,
                        sep=",",
-                       nrows=1878716,
+                       nrows=1946652,
                        header=TRUE,
                        na.strings=c(" ",""))
 
 date_cols <- c("Requisition.submitted.date",
                "Requisition.Approved.Date",
                "ORDERDATE")
-eva_2019[,date_cols] <- lapply(eva_2019[,date_cols],
+eva_2018[,date_cols] <- lapply(eva_2018[,date_cols],
                                strptime,
                                format="%d-%b-%Y %H:%M:%S",
                                tz="EST")
+tail(eva_2018)
+save(eva_2018, file="eva_2018.rda")
 
-save(eva_2019, file="eva_2019.rda")
-
-load("eva_2019.rda")
+load("eva_2018.rda")
 
 #filter data set to my agency
 
-a505.eva <- eva_2019 %>%
+a505.eva <- eva_2018 %>%
   dplyr::filter(Entity.Code == "A505")
 
 # 1 table of orders
@@ -80,3 +80,4 @@ a505.eva %>%
   mutate(month = month(ORDERDATE)) %>%
   group_by(month) %>%
   summarize(Total = n())
+
