@@ -40,7 +40,6 @@ eva_2018[,date_cols] <- lapply(eva_2018[,date_cols],
                                strptime,
                                format="%d-%b-%Y %H:%M:%S",
                                tz="EST")
-tail(eva_2018)
 save(eva_2018, file="eva_2018.rda")
 
 load("eva_2018.rda")
@@ -54,7 +53,7 @@ a505.eva <- eva_2018 %>%
 
 a505.eva %>%
   dplyr::group_by(CATEGORY_DESCRIPTION) %>%
-  dplyr::summarize(Number = n(), Total = sum(Total.Cost), .groups='drop')
+  dplyr::summarize(Total_Purchases = n_distinct(Order..), Total = sum(Total.Cost), .groups='drop')
 
 # 2 avg time between purchases 
 
@@ -79,5 +78,4 @@ a505.eva %>%
 a505.eva %>%
   mutate(month = month(ORDERDATE)) %>%
   group_by(month) %>%
-  summarize(Total = n())
-
+  summarize(Total = n_distinct(Order..))
