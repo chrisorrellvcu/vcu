@@ -58,13 +58,13 @@ a505.eva %>%
 
 # 2 avg time between purchases 
 
-a505.eva$Requisition.submitted.date <- as.POSIXct(a505.eva$Requisition.submitted.date)
+a505.eva$ORDERDATE <- as.POSIXct(a505.eva$ORDERDATE)
 
 a505.eva %>%
-  dplyr::arrange(Requisition.submitted.date) %>%
+  dplyr::arrange(ORDERDATE) %>%
   dplyr::group_by(CATEGORY_DESCRIPTION) %>%
-  dplyr::mutate(days_since_sub=difftime(Requisition.submitted.date,
-                                        lag(Requisition.submitted.date),
+  dplyr::mutate(days_since_sub=difftime(ORDERDATE,
+                                        lag(ORDERDATE),
                                         units="days")) %>%
   dplyr::summarize(avg_days = mean(days_since_sub, na.rm=TRUE), .groups='drop')
 
