@@ -71,7 +71,7 @@ a505.eva %>%
 
 a505.eva %>%
   dplyr::filter((SWAM.Minority == 1 | SWAM.Woman == 1 | SWAM.Small == 1 | SWAM.Micro.Business == 1)) %>%
-  dplyr::summarize(num_purchases = n())
+  dplyr::summarize(num_purchases = n_distinct(Order..))
 
 # 4 Purchases by month
 
@@ -79,3 +79,4 @@ a505.eva %>%
   mutate(month = month(ORDERDATE)) %>%
   group_by(month) %>%
   summarize(Total = n_distinct(Order..))
+
