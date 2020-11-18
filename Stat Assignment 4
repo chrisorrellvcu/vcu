@@ -4,17 +4,13 @@ SENIC <- read.csv("O:/Operations/Chris Orrell/School Files/R Code/SENIC.csv")
 
 SENIC$Medical_School <- as.factor(SENIC$Medical_School)
 
-lm1 <- lm(Infection_pct ~ Length_stay + Region_Name + Medical_School, data = SENIC)
+lm2 <- lm(Infection_pct ~ Length_stay + Age_years + Culture_ratio + X_ray_ratio + Num_Patients + Num_Beds + Num_Nurses + Num_Services + Region_Name + Medical_School, data = SENIC)
+
+lm1 <- lm(Infection_pct ~ Length_stay + Age_years + Culture_ratio + X_ray_ratio + Num_Patients + Num_Beds + Num_Nurses + Num_Services + Region_Name + Medical_School + Region_Name:Medical_School, data = SENIC)
 
 summary(lm1)
-
-lm2 <- lm(Infection_pct ~ Length_stay + Region_Name + Medical_School + Region_Name:Medical_School, data = SENIC)
-
 summary(lm2)
 
 anova(lm1,lm2)
-
-plot(lm2)
-
 
 # Part 2
