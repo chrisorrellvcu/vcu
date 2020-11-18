@@ -1,6 +1,5 @@
-
 # Part 1
-SENIC <- read.csv("O:/Operations/Chris Orrell/School Files/R Code/SENIC.csv")
+SENIC <- read.csv("SENIC.txt")
 
 SENIC$Medical_School <- as.factor(SENIC$Medical_School)
 
@@ -14,3 +13,24 @@ summary(lm2)
 anova(lm1,lm2)
 
 # Part 2
+
+BostonHouse <- read.csv("BostonHousing.txt")
+
+#a
+pairs(BostonHouse)
+pairs(BostonHouse[,c("LSTAT","MEDV")])
+# there is a negative relationship, somewhat curved
+
+#b
+lm1 <- lm(MEDV ~ LSTAT + RM, data = BostonHouse)
+summary(lm1)
+plot(lm1)
+
+#c
+lm2 <- lm(MEDV ~ LSTAT + RM + DIS, data = BostonHouse)
+summary(lm2)
+
+#d
+lm3 <- lm(MEDV ~ LSTAT + RM + DIS + LSTAT:RM, data = BostonHouse)
+summary(lm3)
+ # LSTAT and RM or also correlated
