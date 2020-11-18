@@ -1,0 +1,72 @@
+library(dplyr)
+library(lubridate)
+
+
+# Load Data
+VCU_Class_PO_fis16 <- read.csv("VCU_Class_PO_fis16.csv")
+VCU_Class_PO_fis17 <- read.csv("VCU_Class_PO_fis17.csv")
+VCU_Class_PO_fis18 <- read.csv("VCU_Class_PO_fis18.csv")
+VCU_Class_PO_fis19 <- read.csv("VCU_Class_PO_fis19.csv")
+VCU_Class_PO_fis20 <- read.csv("VCU_Class_PO_fis20.csv")
+VCU_Class_SO_fis16 <- read.csv("VCU_Class_SO_fis16.csv")
+VCU_Class_SO_fis17 <- read.csv("VCU_Class_SO_fis17.csv")
+VCU_Class_SO_fis18 <- read.csv("VCU_Class_SO_fis18.csv")
+VCU_Class_SO_fis19 <- read.csv("VCU_Class_SO_fis19.csv")
+VCU_Class_SO_fis20 <- read.csv("VCU_Class_SO_fis20.csv")
+VCU_Class_QQ_fis16 <- read.csv("VCU_Class_QQ_fis16.csv")
+VCU_Class_QQ_fis17 <- read.csv("VCU_Class_QQ_fis17.csv")
+VCU_Class_QQ_fis18 <- read.csv("VCU_Class_QQ_fis18.csv")
+VCU_Class_QQ_fis19 <- read.csv("VCU_Class_QQ_fis19.csv")
+VCU_Class_QQ_fis20 <- read.csv("VCU_Class_QQ_fis20.csv")
+
+PO1617181920 <- rbind(VCU_Class_PO_fis16, VCU_Class_PO_fis17, VCU_Class_PO_fis18, VCU_Class_PO_fis19,  VCU_Class_PO_fis20)
+SO1617181920 <- rbind(VCU_Class_SO_fis16, VCU_Class_SO_fis17, VCU_Class_SO_fis18, VCU_Class_SO_fis19,  VCU_Class_SO_fis20)
+QQ1617181920 <- rbind(VCU_Class_QQ_fis16, VCU_Class_QQ_fis17, VCU_Class_QQ_fis18, VCU_Class_QQ_fis19,  VCU_Class_QQ_fis20)
+
+write.csv(PO1617181920,"PO1617181920.csv")
+write.csv(SO1617181920,"SO1617181920.csv")
+write.csv(QQ1617181920,"QQ1617181920.csv")
+
+
+(col_names <- make.names(scan("PO1617181920.csv",
+                              what="character",
+                              nlines=1,
+                              sep=",")))
+
+factor_cols <- c("Order.Status",
+                 "SWAM.Minority",
+                 "SWAM.Woman",
+                 "SWAM.Small",
+                 "SWAM.Micro.Business",
+                 "CATEGORY_DESCRIPTION",
+                 "PO.Category",
+                 "Procurement.Transaction.Type",
+                 "Order.Type",
+                 "Registration.Type")
+numeric_cols <- c("Unit.Price",
+                  "POLINENUMBER",
+                  "Quantity.Ordered",
+                  "Total.Cost",
+                  "Total.Cost.Change")
+my_col_classes <- rep("character",34)
+my_col_classes[col_names %in% factor_cols] <- "factor"
+my_col_classes[col_names %in% numeric_cols] <- "numeric"
+my_col_classes
+
+PO1617181920 <- read.table("PO1617181920.csv",
+                       colClasses = my_col_classes,
+                       sep=",",
+                       nrows=8274309,
+                       header=TRUE,
+                       na.strings=c(" ",""))
+
+date_cols <- c("Requisition.submitted.date",
+               "Requisition.Approved.Date",
+               "ORDERDATE")
+PO1617181920[,date_cols] <- lapply(PO1617181920[,date_cols],
+                               strptime,
+                               format="%d-%b-%Y %H:%M:%S",
+                               tz="EST")
+save(PO1617181920, file="PO1617181920.rda")
+
+load("PO1617181920.rda")
