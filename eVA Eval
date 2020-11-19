@@ -1,5 +1,10 @@
 library(dplyr)
 library(lubridate)
+library(tidyverse)
+library(kableExtra)
+library(busdater)
+library(reshape2)
+
 
 
 # Load Data
@@ -41,12 +46,23 @@ PO1617181920 <- rbind(VCU_Class_PO_fis16, VCU_Class_PO_fis17, VCU_Class_PO_fis18
 SO1617181920 <- rbind(VCU_Class_SO_fis16, VCU_Class_SO_fis17, VCU_Class_SO_fis18, VCU_Class_SO_fis19,  VCU_Class_SO_fis20)
 QQ1617181920 <- rbind(VCU_Class_QQ_fis16, VCU_Class_QQ_fis17, VCU_Class_QQ_fis18, VCU_Class_QQ_fis19,  VCU_Class_QQ_fis20)
 
-write.csv(PO1617181920,"PO1617181920.csv")
-write.csv(SO1617181920,"SO1617181920.csv")
-write.csv(QQ1617181920,"QQ1617181920.csv")
+# filter out agency
+A505_PO1617181920 <- PO1617181920 %>%
+  dplyr::filter(Entity.Code == "A505")
 
+A505_SO1617181920 <- SO1617181920 %>%
+  dplyr::filter(Department.Code == "A505")
 
-(col_names <- make.names(scan("PO1617181920.csv",
+A505_QQ1617181920 <- QQ1617181920 %>%
+  dplyr::filter(Department.Code == "A505")
+
+write.csv(A505_PO1617181920,"A505_PO1617181920.csv")
+write.csv(A505_SO1617181920,"A505_SO1617181920.csv")
+write.csv(A505_QQ1617181920,"A505_QQ1617181920.csv")
+
+# PO Cols
+
+(col_names <- make.names(scan("A505_PO1617181920.csv",
                               what="character",
                               nlines=1,
                               sep=",")))
@@ -71,20 +87,251 @@ my_col_classes[col_names %in% factor_cols] <- "factor"
 my_col_classes[col_names %in% numeric_cols] <- "numeric"
 my_col_classes
 
-PO1617181920 <- read.table("PO1617181920.csv",
-                       colClasses = my_col_classes,
-                       sep=",",
-                       nrows=8274309,
-                       header=TRUE,
-                       na.strings=c(" ",""))
+A505_PO1617181920 <- read.table("A505_PO1617181920.csv",
+                           colClasses = my_col_classes,
+                           sep=",",
+                           nrows=5085,
+                           header=TRUE,
+                           na.strings=c(" ",""))
 
 date_cols <- c("Requisition.submitted.date",
                "Requisition.Approved.Date",
                "ORDERDATE")
-PO1617181920[,date_cols] <- lapply(PO1617181920[,date_cols],
-                               strptime,
-                               format="%d-%b-%Y %H:%M:%S",
-                               tz="EST")
-save(PO1617181920, file="PO1617181920.rda")
+A505_PO1617181920[,date_cols] <- lapply(A505_PO1617181920[,date_cols],
+                                   strptime,
+                                   format="%d-%b-%Y %H:%M:%S",
+                                   tz="EST")
+A505_PO1617181920 <- select(A505_PO1617181920,-c(X))
 
-load("PO1617181920.rda")
+save(A505_PO1617181920, file="A505_PO1617181920.rda")
+
+# SO Cols
+
+(col_names <- make.names(scan("A505_SO1617181920.csv",
+                              what="character",
+                              nlines=1,
+                              sep=",")))
+
+factor_cols <- c("Bid.Number",
+                 "Version",
+                 "Bid.Category",
+                 "Status")
+my_col_classes <- rep("character",25)
+my_col_classes[col_names %in% factor_cols] <- "factor"
+my_col_classes
+
+A505_SO1617181920 <- read.table("A505_SO1617181920.csv",
+                           colClasses = my_col_classes,
+                           sep=",",
+                           nrows=12,
+                           header=TRUE,
+                           na.strings=c(" ",""))
+
+date_cols <- c("Original.Publish.Date",
+               "Publish.Date",
+               "Closing.Date",
+               "Award.Date")
+A505_SO1617181920[,date_cols] <- lapply(A505_SO1617181920[,date_cols],
+                                   strptime,
+                                   format="%d-%b-%Y %H:%M:%S",
+                                   tz="EST")
+A505_SO1617181920 <- select(A505_SO1617181920,-c(X))
+
+save(A505_SO1617181920, file="A505_SO1617181920.rda")
+
+#QQ Cols
+
+(col_names <- make.names(scan("A505_QQ1617181920.csv",
+                              what="character",
+                              nlines=1,
+                              sep=",")))
+
+factor_cols <- c("REQUEST_TYPE_CODE",
+                 "REQUEST_TYPE_DESC",
+                 "Status",
+                 "NIGP.List")
+my_col_classes <- rep("character",20)
+my_col_classes[col_names %in% factor_cols] <- "factor"
+my_col_classes
+
+A505_QQ1617181920 <- read.table("A505_QQ1617181920.csv",
+                           colClasses = my_col_classes,
+                           sep=",",
+                           nrows=10,
+                           header=TRUE,
+                           na.strings=c(" ",""))
+
+date_cols <- c("Original.Published.Date",
+               "Closed.Date",
+               "Award.Date")
+A505_QQ1617181920[,date_cols] <- lapply(A505_QQ1617181920[,date_cols],
+                                   strptime,
+                                   format="%d-%b-%Y %H:%M:%S",
+                                   tz="EST")
+
+A505_QQ1617181920 <- select(A505_QQ1617181920,-c(X))
+
+save(A505_QQ1617181920, file="A505_QQ1617181920.rda")
+
+# Initial Analysis
+
+load("A505_PO1617181920.rda")
+load("A505_SO1617181920.rda")
+load("A505_QQ1617181920.rda")
+
+#1 PO - Annual Spend: Total Cost per Financial Year
+
+A505_PO1617181920$fiscal_year <- as.factor(A505_PO1617181920$fiscal_year)
+
+A505_PO1617181920 %>%
+  dplyr::group_by(fiscal_year) %>%
+  dplyr::summarize(Total = sum(Total.Cost), .groups='drop')
+
+#2 PO - Count of distinct orders
+
+A505_PO1617181920 %>% 
+  dplyr::group_by(fiscal_year) %>%
+  dplyr::summarize(num_orders = n_distinct(Order..))
+
+#3 So - Count
+
+A505_SO1617181920 %>% 
+  dplyr::group_by(fiscal_year, Application) %>%
+  dplyr::summarize(num_bids = n_distinct(Bid.Number))
+
+#4 SO - Spend: Total Awards
+
+
+#------NO SPEND--------
+
+#5 SO & QQ - Electronic Responses - utilization
+
+#-----not enough for any trends, only 22 SO and QQ combined---------
+
+#6 SO - Cycle Time
+
+#------Didn't fill out dates------------
+
+#7 PO - Procurement Approval Time
+
+A505_PO1617181920$Requisition.submitted.date <- as.POSIXct(A505_PO1617181920$Requisition.submitted.date)
+A505_PO1617181920$Requisition.Approved.Date <- as.POSIXct(A505_PO1617181920$Requisition.Approved.Date)
+
+A505_PO1617181920 %>%
+  dplyr::arrange(Requisition.submitted.date, Requisition.Approved.Date) %>%
+  dplyr::group_by(fiscal_year) %>%
+  dplyr::mutate(days_since_sub=difftime(Requisition.Approved.Date,
+                                        Requisition.submitted.date,
+                                        units="days")) %>%
+  dplyr::summarize(avg_days = mean(days_since_sub, na.rm=TRUE), .groups='drop')
+
+#8 SO & QQ Solicitation Volume
+
+#-----not enough for any trends, only 22 SO and QQ combined---------
+
+#9 PO, SO, & QQ Volume
+
+forplot <- A505_PO1617181920 %>% 
+  dplyr::group_by(fiscal_year, lubridate::month(Requisition.submitted.date)) %>%
+  dplyr::summarize(num_orders = n_distinct(Order..), .groups = 'drop')
+
+tmp_df <- A505_PO1617181920
+
+tmp_df$MONTH <- lubridate::month(tmp_df$Requisition.submitted.date)
+tmp_df$YEAR <- lubridate::year(tmp_df$Requisition.submitted.date)
+tmp_df$YM <- paste0(tmp_df$YEAR, "-", tmp_df$MONTH)
+
+tmp_df$YM <- factor(tmp_df$YM, levels = c(c(paste0("2015-", 7:12), paste0("2016-", 1:6)),
+                                          c(paste0("2016-", 7:12), paste0("2017-", 1:6)),
+                                          c(paste0("2017-", 7:12), paste0("2018-", 1:6)),
+                                          c(paste0("2018-", 7:12), paste0("2019-", 1:6)),
+                                          c(paste0("2019-", 7:12), paste0("2020-", 1:6))
+))
+
+tmp_df$GROUP <- ifelse(tmp_df$YM %in% c(paste0("2015-", 7:12), paste0("2016-", 1:6)), "2015-2016",
+                       ifelse(tmp_df$YM %in% c(paste0("2016-", 7:12), paste0("2017-", 1:6)), "2016-2017",
+                              ifelse(tmp_df$YM %in% c(paste0("2017-", 7:12), paste0("2018-", 1:6)), "2017-2018",
+                                     ifelse(tmp_df$YM %in% c(paste0("2018-", 7:12), paste0("2019-", 1:6)), "2018-2019", "2019-2020"))))
+
+for_plot <- tmp_df %>%
+  dplyr::group_by(YM, GROUP) %>%
+  dplyr::select(GROUP, YM, Order..) %>%
+  dplyr::summarize(num_orders = n_distinct(Order..), .groups = "drop")
+
+p <- ggplot(for_plot, aes(x = YM, y = num_orders, fill = GROUP))
+p <- p + geom_bar(stat = "identity")
+p <- p + geom_text(aes(label = num_orders, y = num_orders), hjust = -.5)
+p <- p + facet_wrap(GROUP~., scales = "free_y")
+p <- p + coord_flip()
+p <- p + xlab("Year-Month")
+p <- p + ylab("Total Number of Orders")
+p <- p + theme(legend.position = "none") # to remove the legend
+p
+
+# 2016-2017 was a really light year, before 2020 it seemed they spent heavily towards the end of the fiscal year but with 2020 that trend reversed covid perhaps?
+
+#-----not enough for any trends, only 22 SO and QQ combined---------
+
+#10 PO Registration Category %
+
+PO_df <- A505_PO1617181920
+percs_by_year <- tapply(PO_df$Registration.Type, PO_df$fiscal_year, function(x) table(x) / sum(table(x)) * 100)
+
+# fill in missing data
+percs_by_year[["2020"]] <- c(percs_by_year[["2020"]], `Un-Registered` = 0)
+
+percs_by_year
+
+for_plot <- do.call(rbind, percs_by_year)
+for_plot <- reshape2::melt(for_plot)
+for_plot$Var2 <- as.factor(for_plot$Var2)
+for_plot$labels <- round(for_plot$value, 2)
+
+p <- ggplot(for_plot, aes(x = Var2, y = value, fill = Var2))
+p <- p + geom_bar(stat = "identity")
+p <- p + facet_wrap(Var1~.)
+p <- p + geom_text(aes(label = labels, y = value), vjust = -.5)
+p <- p + xlab("Registration Type")
+p <- p + ylab("Percentage")
+p <- p + labs(fill = "Registration Type")
+p
+
+for_plot <- for_plot[order(for_plot$Var1), ]
+for_plot %>%
+  kbl() %>%
+  kable_styling()
+
+
+#11 PO: SWaM utilization
+
+PO_df <- A505_PO1617181920
+
+PO_df$SWAM.Micro.Business <- as.integer(PO_df$SWAM.Micro.Business)
+PO_df$SWAM.Minority <- as.integer(PO_df$SWAM.Minority)
+PO_df$SWAM.Small <- as.integer(PO_df$SWAM.Small)
+PO_df$SWAM.Woman <- as.integer(PO_df$SWAM.Woman)
+
+PO_df$All_SWAM <- PO_df$SWAM.Micro.Business + PO_df$SWAM.Minority + PO_df$SWAM.Small + PO_df$SWAM.Woman
+PO_df$All_SWAM <- ifelse(PO_df$All_SWAM > 0, 1, 0)
+
+for_plot <- PO_df[!is.na(PO_df$All_SWAM), ]
+for_plot <- for_plot %>%
+  dplyr::group_by(fiscal_year) %>%
+  dplyr::select(fiscal_year, All_SWAM, Total.Cost) %>%
+  dplyr::summarize(percent_swam = sum(All_SWAM * Total.Cost) / sum(Total.Cost) * 100, .groups = "drop")
+
+for_plot$YEAR_factor <- as.factor(for_plot$fiscal_year)
+
+p <- ggplot(for_plot, aes(x = YEAR_factor, y = percent_swam, fill = YEAR_factor))
+p <- p + geom_bar(stat = "identity")
+p <- p + ylab("% at least one SWAM")
+p <- p + xlab("Order Year")
+p <- p + labs(fill = "Order Year")
+p <- p + geom_hline(yintercept = 42, linetype = "dashed", color = "red")
+p
+
+
+# Make Table 
+for_plot %>%
+  kbl() %>%
+  kable_styling()
