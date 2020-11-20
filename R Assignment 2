@@ -1,0 +1,94 @@
+library(dplyr)
+library(lubridate)
+library(ggplot2)
+
+load("A505_PO1617181920.rda")
+
+PO18 <- read.csv("VCU_Class_PO_fis18.csv")
+
+(col_names <- make.names(scan("VCU_Class_PO_fis18.csv",
+                              what="character",
+                              nlines=1,
+                              sep=",")))
+
+factor_cols <- c("Order.Status",
+                 "SWAM.Minority",
+                 "SWAM.Woman",
+                 "SWAM.Small",
+                 "SWAM.Micro.Business",
+                 "CATEGORY_DESCRIPTION",
+                 "PO.Category",
+                 "Procurement.Transaction.Type",
+                 "Order.Type",
+                 "Registration.Type")
+numeric_cols <- c("Unit.Price",
+                  "POLINENUMBER",
+                  "Quantity.Ordered",
+                  "Total.Cost",
+                  "Total.Cost.Change")
+my_col_classes <- rep("character",33)
+my_col_classes[col_names %in% factor_cols] <- "factor"
+my_col_classes[col_names %in% numeric_cols] <- "numeric"
+my_col_classes
+
+PO18 <- read.table("VCU_Class_PO_fis18.csv",
+                                colClasses = my_col_classes,
+                                sep=",",
+                                nrows=1946653,
+                                header=TRUE,
+                                na.strings=c(" ",""))
+
+date_cols <- c("Requisition.submitted.date",
+               "Requisition.Approved.Date",
+               "ORDERDATE")
+PO18[,date_cols] <- lapply(PO18[,date_cols],
+                                        strptime,
+                                        format="%d-%b-%Y %H:%M:%S",
+                                        tz="EST")
+
+save(PO18, file="PO18.rda")
+load("PO18.rda")
+
+A505_PO2018 <- A505_PO1617181920 %>%
+  filter(fiscal_year==2018)
+
+Group_Data <- PO18 %>%
+  filter(Entity.Code %in% c('A501', 'A440', 'A132', 'A601', 'A156', 'A505'))
+
+#1
+
+Histo_plot <- ggplot(A505_PO2018, aes(x = Total.Cost)) +
+  geom_histogram(binwidth = 100000) +
+  labs(title = "A505 Total Cost Dist", x = 'Total Cost', y = 'Count')
+Histo_plot
+
+# very right skewed couple huge outlier purchases 
+
+
+#2
+
+A505_PO2018$MONTH <- lubridate::month(A505_PO2018$Requisition.submitted.date, label=TRUE)
+A505_PO2018$DAY <- lubridate::wday(A505_PO2018$Requisition.submitted.date, label=TRUE)
+
+
+Box_Data <- A505_PO2018 %>% 
+  dplyr::group_by(Requisition.submitted.date, DAY) %>%
+  dplyr::summarize(num_sub = n(), .groups = 'drop')
+
+ggplot(Box_Data, aes(x = DAY, y = num_sub)) +
+         geom_boxplot()
+
+
+# no not a lot of data but middle of the week is more prevalent that Monday and Fridays. Thursday is  the busiest day!
+
+#3
+Group_Data$MONTH <- lubridate::month(Group_Data$Requisition.submitted.date, label=TRUE)
+
+Box_Data2 <- Group_Data %>% 
+  dplyr::group_by(MONTH, Entity.Code) %>%
+  dplyr::summarize(num_sub = n(), .groups = 'drop')
+
+ggplot(Box_Data2, aes(x = MONTH, y = num_sub, group = Entity.Code)) +
+  geom_line(aes(linetype=Entity.Code, color=Entity.Code), size = 1) +
+  geom_point(aes(shape=Entity.Code, color=Entity.Code), size = 2) +
+  labs(title = 'Orders by Month', x = 'Month', y = 'Total Submissions')
