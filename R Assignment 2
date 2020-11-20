@@ -3,50 +3,6 @@ library(lubridate)
 library(ggplot2)
 
 load("A505_PO1617181920.rda")
-
-PO18 <- read.csv("VCU_Class_PO_fis18.csv")
-
-(col_names <- make.names(scan("VCU_Class_PO_fis18.csv",
-                              what="character",
-                              nlines=1,
-                              sep=",")))
-
-factor_cols <- c("Order.Status",
-                 "SWAM.Minority",
-                 "SWAM.Woman",
-                 "SWAM.Small",
-                 "SWAM.Micro.Business",
-                 "CATEGORY_DESCRIPTION",
-                 "PO.Category",
-                 "Procurement.Transaction.Type",
-                 "Order.Type",
-                 "Registration.Type")
-numeric_cols <- c("Unit.Price",
-                  "POLINENUMBER",
-                  "Quantity.Ordered",
-                  "Total.Cost",
-                  "Total.Cost.Change")
-my_col_classes <- rep("character",33)
-my_col_classes[col_names %in% factor_cols] <- "factor"
-my_col_classes[col_names %in% numeric_cols] <- "numeric"
-my_col_classes
-
-PO18 <- read.table("VCU_Class_PO_fis18.csv",
-                                colClasses = my_col_classes,
-                                sep=",",
-                                nrows=1946653,
-                                header=TRUE,
-                                na.strings=c(" ",""))
-
-date_cols <- c("Requisition.submitted.date",
-               "Requisition.Approved.Date",
-               "ORDERDATE")
-PO18[,date_cols] <- lapply(PO18[,date_cols],
-                                        strptime,
-                                        format="%d-%b-%Y %H:%M:%S",
-                                        tz="EST")
-
-save(PO18, file="PO18.rda")
 load("PO18.rda")
 
 A505_PO2018 <- A505_PO1617181920 %>%
