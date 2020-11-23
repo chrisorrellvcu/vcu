@@ -1,0 +1,84 @@
+library(readr)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(plyr)
+library(qqplotr)
+library(caret)
+
+
+# Question 1
+# col type assignment
+
+(col_names <- make.names(scan("bank_data.txt",
+                              what="character",
+                              nlines=1,
+                              sep=",")))
+
+factor_cols <- c("marital",
+                 "education",
+                 "default",
+                 "housing",
+                 "loan",
+                 "contact",
+                 "month",
+                 "poutcome",
+                 "target")
+numeric_cols <- c("day",
+                  "duration",
+                  "campaign",
+                  "pdays",
+                  "previous",
+                  "age",
+                  "balance")
+my_col_classes <- rep("character",17)
+my_col_classes[col_names %in% factor_cols] <- "factor"
+my_col_classes[col_names %in% numeric_cols] <- "numeric"
+my_col_classes
+
+
+Bank_Data <- read.table("bank_data.txt",
+                                colClasses = my_col_classes,
+                                sep=",",
+                                nrows=1121,
+                                header=TRUE,
+                                na.strings=c(" ",""))
+
+
+#check out this variable
+levels(as.factor(Bank_Data$job))
+summary(as.factor(Bank_Data$job))
+
+# reassign job cat
+Bank_Data$job[(Bank_Data$job=="housemaid" | Bank_Data$job=="services")] <- "services"
+Bank_Data$job[(Bank_Data$job=="self-employed" | Bank_Data$job=="entrepreneur")] <- "self-employed"
+Bank_Data$job[(Bank_Data$job=="blue-collar" | Bank_Data$job=="technician")] <- "blue-collar"
+Bank_Data$job[(Bank_Data$job=="admin." | Bank_Data$job=="management")] <- "white-collar"
+Bank_Data$job[(Bank_Data$job=="unknown")] <- NA
+
+Bank_Data$job <- as.factor(Bank_Data$job)
+
+
+#A
+#Fit Logistic Regression Model
+myglm <- glm(target ~ ., family=binomial, data=Bank_Data)
+summary(myglm)
+#variable selection
+drop1(myglm,test="Chisq")
+
+#reduced model
+myglm1 <- glm(target ~ housing + loan + contact + month + duration + campaign + poutcome, family = binomial, data = Bank_Data)
+summary(myglm1)
+
+#B
+exp(coef(myglm1))
+exp(cbind(OR=coef(myglm1),confint(myglm1)))
+
+#C
+pdata <- predict(myglm1, type="response")
+convert <- as.factor(Bank_Data$target == "yes")
+confusionMatrix(data=as.factor(pdata > 0.5), reference=convert)
+
+#odds ratios
+exp(coef(myglm))
+exp(cbind(OR=coef(myglm),confint(myglm)))
