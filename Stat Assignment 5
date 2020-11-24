@@ -82,3 +82,52 @@ confusionMatrix(data=as.factor(pdata > 0.5), reference=convert)
 #odds ratios
 exp(coef(myglm))
 exp(cbind(OR=coef(myglm),confint(myglm)))
+
+# keep them on the phone longer and call them if the previous marketing campaign was a success
+
+# Question 2
+
+SENIC <- read.table("SENIC.csv",header=TRUE, sep=",")
+SENIC <- select(SENIC,-c(X))
+SENIC$Medical_School <- as.factor(SENIC$Medical_School)
+SENIC$Region_Name <- as.factor(SENIC$Region_Name)
+
+# A 
+mylm <- lm(Infection_pct ~ Length_stay + Age_years + Culture_ratio + X_ray_ratio + Num_Patients + Num_Beds + Num_Nurses + Num_Services + Region_Name + Medical_School + Region_Name:Medical_School, data = SENIC)
+summary(mylm)
+
+r = rstudent(mylm)
+plot(r)
+abline(h=2,col="blue")
+#Identify outlier points
+SENIC[r > 2,]
+
+# B
+lev = hat(model.matrix(mylm))
+plot(lev)
+p <- dim(model.matrix(mylm))[2]
+n <- dim(model.matrix(mylm))[1]
+abline(h=(2*p)/n, col="blue")
+#Identify high leverage points
+SENIC[lev > (2*p)/n,]
+
+# C
+cook = cooks.distance(mylm)
+plot(cook)
+abline(h=1,col="blue")
+abline(h=4/n,col="red")
+abline(h=3*mean(cook),col="green")
+
+# D
+pairs(SENIC[,-c(1,4,8:9,12,14:21)])
+cor(SENIC[,-c(1,4,8:9,12,14:21)])
+library(car)
+vif(mylm) 
+
+#LASSO 
+library(glmnet)
+x <- model.matrix(mylm)
+x <- x[,-1]
+homelasso <- glmnet(x=x, y=SENIC[,4])
+plot(homelasso)
+coef(homelasso)
