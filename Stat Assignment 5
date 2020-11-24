@@ -119,8 +119,8 @@ abline(h=4/n,col="red")
 abline(h=3*mean(cook),col="green")
 
 # D
-pairs(SENIC[,-c(1,4,8:9,12,14:21)])
-cor(SENIC[,-c(1,4,8:9,12,14:21)])
+pairs(SENIC[,-c(1,4,8,12,14:17,19:20)])
+cor(SENIC[,-c(1,4,8,12,14:17,19:20)])
 library(car)
 vif(mylm) 
 
