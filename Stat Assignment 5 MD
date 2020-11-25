@@ -1,0 +1,167 @@
+---
+title: "DAPT 621 - Assignment 5"
+author: "Christopher Orrell"
+date: "11/25/2020"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(tidyr)
+library(dplyr)
+library(ggplot2)
+library(plyr)
+library(qqplotr)
+library(caret)
+```
+
+```{r data load, echo=FALSE}
+(col_names <- make.names(scan("bank_data.txt",
+                              what="character",
+                              nlines=1,
+                              sep=",")))
+
+factor_cols <- c("marital",
+                 "education",
+                 "default",
+                 "housing",
+                 "loan",
+                 "contact",
+                 "month",
+                 "poutcome",
+                 "target")
+numeric_cols <- c("day",
+                  "duration",
+                  "campaign",
+                  "pdays",
+                  "previous",
+                  "age",
+                  "balance")
+my_col_classes <- rep("character",17)
+my_col_classes[col_names %in% factor_cols] <- "factor"
+my_col_classes[col_names %in% numeric_cols] <- "numeric"
+my_col_classes
+
+
+Bank_Data <- read.table("bank_data.txt",
+                                colClasses = my_col_classes,
+                                sep=",",
+                                nrows=1121,
+                                header=TRUE,
+                                na.strings=c(" ",""))
+
+
+
+# reassign job cat
+Bank_Data$job[(Bank_Data$job=="housemaid" | Bank_Data$job=="services")] <- "services"
+Bank_Data$job[(Bank_Data$job=="self-employed" | Bank_Data$job=="entrepreneur")] <- "self-employed"
+Bank_Data$job[(Bank_Data$job=="blue-collar" | Bank_Data$job=="technician")] <- "blue-collar"
+Bank_Data$job[(Bank_Data$job=="admin." | Bank_Data$job=="management")] <- "white-collar"
+Bank_Data$job[(Bank_Data$job=="unknown")] <- NA
+
+Bank_Data$job <- as.factor(Bank_Data$job)
+
+SENIC <- read.table("SENIC.csv",header=TRUE, sep=",")
+SENIC <- select(SENIC,-c(X))
+SENIC$Medical_School <- as.factor(SENIC$Medical_School)
+SENIC$Region_Name <- as.factor(SENIC$Region_Name)
+```
+
+#Question 1
+
+##A
+
+```{r A1, echo=FALSE}
+#A
+#Fit Logistic Regression Model
+myglm <- glm(target ~ ., family=binomial, data=Bank_Data)
+summary(myglm)
+#variable selection
+drop1(myglm,test="Chisq")
+
+#reduced model
+myglm1 <- glm(target ~ housing + loan + contact + month + duration + campaign + poutcome, family = binomial, data = Bank_Data)
+summary(myglm1)
+
+```
+
+##B
+```{r B1, echo=FALSE}
+#B
+summary(myglm1)
+exp(coef(myglm1))
+exp(cbind(OR=coef(myglm1),confint(myglm1)))
+```
+
+##C
+```{r C1, echo=FALSE}
+#C
+pdata <- predict(myglm1, type="response")
+convert <- as.factor(Bank_Data$target == "yes")
+confusionMatrix(data=as.factor(pdata > 0.5), reference=convert)
+```
+
+##D
+```{r D1, echo=FALSE}
+#odds ratios
+exp(coef(myglm))
+exp(cbind(OR=coef(myglm),confint(myglm)))
+
+# keep them on the phone longer and call them if the previous marketing campaign was a success
+```
+
+#Question 2
+
+##A
+```{r A2, echo=FALSE}
+# A 
+mylm <- lm(Infection_pct ~ Length_stay + Age_years + Culture_ratio + X_ray_ratio + Num_Patients + Num_Beds + Num_Nurses + Num_Services + Region_Name + Medical_School + Region_Name:Medical_School, data = SENIC)
+summary(mylm)
+
+r = rstudent(mylm)
+plot(r)
+abline(h=2,col="blue")
+#Identify outlier points
+SENIC[r > 2,]
+
+```
+
+##B
+```{r B2, echo=FALSE}
+# B
+lev = hat(model.matrix(mylm))
+plot(lev)
+p <- dim(model.matrix(mylm))[2]
+n <- dim(model.matrix(mylm))[1]
+abline(h=(2*p)/n, col="blue")
+#Identify high leverage points
+SENIC[lev > (2*p)/n,]
+```
+
+##C
+```{r C2, echo=FALSE}
+# C
+cook = cooks.distance(mylm)
+plot(cook)
+abline(h=1,col="blue")
+abline(h=4/n,col="red")
+abline(h=3*mean(cook),col="green")
+```
+
+##D
+```{r D2, echo=FALSE}
+# D
+pairs(SENIC[,-c(1,8,12,14:17,19:20)])
+cor(SENIC[,-c(1,8,12,14:17,19:20)])
+library(car)
+vif(mylm) 
+
+#LASSO 
+library(glmnet)
+x <- model.matrix(mylm)
+x <- x[,-1]
+homelasso <- glmnet(x=x, y=SENIC[,4])
+plot(homelasso)
+coef(homelasso)
+```
