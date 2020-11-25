@@ -16,11 +16,11 @@ library(qqplotr)
 library(caret)
 ```
 
-```{r data load, echo=FALSE}
-(col_names <- make.names(scan("bank_data.txt",
+```{r data load, echo=FALSE, include=FALSE}
+col_names <- make.names(scan("bank_data.txt",
                               what="character",
                               nlines=1,
-                              sep=",")))
+                              sep=","))
 
 factor_cols <- c("marital",
                  "education",
@@ -41,7 +41,6 @@ numeric_cols <- c("day",
 my_col_classes <- rep("character",17)
 my_col_classes[col_names %in% factor_cols] <- "factor"
 my_col_classes[col_names %in% numeric_cols] <- "numeric"
-my_col_classes
 
 
 Bank_Data <- read.table("bank_data.txt",
@@ -77,22 +76,33 @@ SENIC$Region_Name <- as.factor(SENIC$Region_Name)
 #Fit Logistic Regression Model
 myglm <- glm(target ~ ., family=binomial, data=Bank_Data)
 summary(myglm)
+
+```
+
+Here is the summary of all the variables, looking at the p-values we can clearly see that some of these variables are not helpful predictors for this model. However, we don't want to p-value hunt so we must identify which vairables are significant for the model.
+
+```{r A1.1, echo=FALSE}
 #variable selection
 drop1(myglm,test="Chisq")
+```
 
+If we look at the Chi values we can see variables housing, loan, contact, month, duration, campaign, and poutcome are highlighted as good predictors. We can use these variables to refit the model. 
+
+See reduced model below:
+```{r A1.2, echo=FALSE}
 #reduced model
 myglm1 <- glm(target ~ housing + loan + contact + month + duration + campaign + poutcome, family = binomial, data = Bank_Data)
 summary(myglm1)
-
 ```
 
 ##B
 ```{r B1, echo=FALSE}
 #B
 summary(myglm1)
-exp(coef(myglm1))
-exp(cbind(OR=coef(myglm1),confint(myglm1)))
+
 ```
+
+Need help putting this into words
 
 ##C
 ```{r C1, echo=FALSE}
@@ -101,15 +111,17 @@ pdata <- predict(myglm1, type="response")
 convert <- as.factor(Bank_Data$target == "yes")
 confusionMatrix(data=as.factor(pdata > 0.5), reference=convert)
 ```
+The accuracy of the model is 82%
 
 ##D
 ```{r D1, echo=FALSE}
 #odds ratios
-exp(coef(myglm))
-exp(cbind(OR=coef(myglm),confint(myglm)))
+exp(coef(myglm1))
+exp(cbind(OR=coef(myglm1),confint(myglm1)))
 
 # keep them on the phone longer and call them if the previous marketing campaign was a success
 ```
+Based on this odds ratio diagram it would seem the best idea would contact the people who the last outcome of the previous marketing was a success if they have a phone number and to keep them on the phone as long as possible.
 
 #Question 2
 
@@ -119,49 +131,108 @@ exp(cbind(OR=coef(myglm),confint(myglm)))
 mylm <- lm(Infection_pct ~ Length_stay + Age_years + Culture_ratio + X_ray_ratio + Num_Patients + Num_Beds + Num_Nurses + Num_Services + Region_Name + Medical_School + Region_Name:Medical_School, data = SENIC)
 summary(mylm)
 
-r = rstudent(mylm)
-plot(r)
-abline(h=2,col="blue")
+SENIC$r <- rstudent(mylm)
+
 #Identify outlier points
-SENIC[r > 2,]
+
+StudPlot <- ggplot(SENIC, aes(y = r, x = ID)) +
+  geom_point() +
+  geom_hline(yintercept = 2, linetype ="dashed", color = "red") +
+  labs(title = 'Studentized Test', x = 'Index', y = 'S.Residual')
+
+StudOut <- SENIC[r > 2,]
 
 ```
+```{r, echo=FALSE, fig.align="center"}
+StudPlot
+```
+
+```{r, echo=FALSE}
+StudOut
+```
+
+Using the studentized rule of thumb we can see three outliers in the y space: rows 10, 35, and 53. 
 
 ##B
 ```{r B2, echo=FALSE}
 # B
-lev = hat(model.matrix(mylm))
-plot(lev)
+SENIC$lev <- hat(model.matrix(mylm))
 p <- dim(model.matrix(mylm))[2]
 n <- dim(model.matrix(mylm))[1]
-abline(h=(2*p)/n, col="blue")
+H <- (2*p)/n
+
 #Identify high leverage points
-SENIC[lev > (2*p)/n,]
+HatOut <- SENIC[lev > (2*p)/n,]
+
+HatPlot <- ggplot(SENIC, aes(y = lev, x = ID)) +
+  geom_point() +
+  geom_hline(yintercept = H, linetype ="dashed", color = "green") +
+  labs(title = 'Hat Test', x = 'Index', y = 'Hats')
 ```
+
+```{r, echo=FALSE, fig.align='center'}
+HatPlot
+```
+
+```{r, echo=FALSE}
+HatOut
+```
+
+Using the rule of thumb for outlying observations in the X space for the high leverage points: Hat > 2(k+1)/n.
+
+There are 13 high leverage points. 
 
 ##C
 ```{r C2, echo=FALSE}
 # C
-cook = cooks.distance(mylm)
-plot(cook)
-abline(h=1,col="blue")
-abline(h=4/n,col="red")
-abline(h=3*mean(cook),col="green")
+SENIC$CD <- cooks.distance(mylm)
+L2 <- 4/n
+L3 <- 3*mean(SENIC$CD)
+
+
+CookPlot <- ggplot(SENIC, aes(y = CD, x = ID)) +
+  geom_point() +
+  geom_hline(yintercept = 1, linetype ="dashed", color = "blue") +
+  geom_hline(yintercept = L2, linetype ="dashed", color = "green") +
+  geom_hline(yintercept = L3, linetype ="dashed", color = "red") +
+  labs(title = 'Cooks Distance', x = 'Index', y = 'Distance')
 ```
+
+```{r, echo=FALSE, fig.align='center'}
+CookPlot
+```
+Using the three line values for the Cook's Distance test we can conclude that a few data points pass 2 out of the 3 rules of thumb but no data points have a Cook's Distance greater than 1. So we can conclude that none of these data points warrant a closer look for overall influence. 
 
 ##D
 ```{r D2, echo=FALSE}
 # D
-pairs(SENIC[,-c(1,8,12,14:17,19:20)])
-cor(SENIC[,-c(1,8,12,14:17,19:20)])
+pairs(SENIC[,-c(1,8,12,14:17,19:23)])
+cor(SENIC[,-c(1,8,12,14:17,19:23)])
 library(car)
 vif(mylm) 
+```
 
+Looking at the pairwise plot and the VIFs we can see that there is indeed a string indication of mutlicollinearity with the variables: Num_Beds, Num_Patients, Num_Nurses, and Num_Services. Especially Num_Patients and Num_Beds their VIFs are greater than 10.   
+
+```{r lasso, echo=FALSE, fig.align='center'}
 #LASSO 
 library(glmnet)
 x <- model.matrix(mylm)
 x <- x[,-1]
 homelasso <- glmnet(x=x, y=SENIC[,4])
 plot(homelasso)
+```
+
+
+```{r lasso2, echo=FALSE}
 coef(homelasso)
 ```
+
+Using this lasso coefficient chart we can see that Num_Services comes first so we can include that in our new model and exclude the other correlated variables. 
+
+```{r final_model, echo=FALSE}
+mylm2 <- lm(Infection_pct ~ Length_stay + Age_years + Culture_ratio + X_ray_ratio + Num_Services + Region_Name + Medical_School + Region_Name:Medical_School, data = SENIC)
+summary(mylm2)
+```
+
+We can see with this simpler model the $r^{2}$ is the same as the more complex one we started with. 
