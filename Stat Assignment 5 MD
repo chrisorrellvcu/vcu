@@ -1,8 +1,9 @@
 ---
-title: "DAPT 621 - Assignment 5"
-author: "Christopher Orrell"
-date: "11/25/2020"
-output: word_document
+title: "DAPT621 - Assignment 5"
+author: Christopher Orrell, Christine Holzmen, Christian Hennely, Piper Neddenien,
+  Abdul Jalil
+date: "11/28/2020"
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
@@ -61,15 +62,14 @@ Bank_Data$job[(Bank_Data$job=="unknown")] <- NA
 
 Bank_Data$job <- as.factor(Bank_Data$job)
 
-SENIC <- read.table("SENIC.csv",header=TRUE, sep=",")
-SENIC <- select(SENIC,-c(X))
+SENIC <- read.table("SENIC.txt",header=TRUE, sep=",")
 SENIC$Medical_School <- as.factor(SENIC$Medical_School)
 SENIC$Region_Name <- as.factor(SENIC$Region_Name)
 ```
 
-#Question 1
-
-##A
+# Question 1
+ 
+## A
 
 ```{r A1, echo=FALSE}
 #A
@@ -95,7 +95,7 @@ myglm1 <- glm(target ~ housing + loan + contact + month + duration + campaign + 
 summary(myglm1)
 ```
 
-##B
+## B
 ```{r B1, echo=FALSE}
 #B
 summary(myglm1)
@@ -104,7 +104,7 @@ summary(myglm1)
 
 Need help putting this into words
 
-##C
+## C
 ```{r C1, echo=FALSE}
 #C
 pdata <- predict(myglm1, type="response")
@@ -113,7 +113,7 @@ confusionMatrix(data=as.factor(pdata > 0.5), reference=convert)
 ```
 The accuracy of the model is 82%
 
-##D
+## D
 ```{r D1, echo=FALSE}
 #odds ratios
 exp(coef(myglm1))
@@ -123,9 +123,9 @@ exp(cbind(OR=coef(myglm1),confint(myglm1)))
 ```
 Based on this odds ratio diagram it would seem the best idea would contact the people who the last outcome of the previous marketing was a success if they have a phone number and to keep them on the phone as long as possible.
 
-#Question 2
+# Question 2
 
-##A
+## A
 ```{r A2, echo=FALSE}
 # A 
 mylm <- lm(Infection_pct ~ Length_stay + Age_years + Culture_ratio + X_ray_ratio + Num_Patients + Num_Beds + Num_Nurses + Num_Services + Region_Name + Medical_School + Region_Name:Medical_School, data = SENIC)
@@ -140,9 +140,11 @@ StudPlot <- ggplot(SENIC, aes(y = r, x = ID)) +
   geom_hline(yintercept = 2, linetype ="dashed", color = "red") +
   labs(title = 'Studentized Test', x = 'Index', y = 'S.Residual')
 
-StudOut <- SENIC[r > 2,]
+StudOut <- SENIC[SENIC$r > 2,]
 
 ```
+
+
 ```{r, echo=FALSE, fig.align="center"}
 StudPlot
 ```
@@ -153,7 +155,7 @@ StudOut
 
 Using the studentized rule of thumb we can see three outliers in the y space: rows 10, 35, and 53. 
 
-##B
+## B
 ```{r B2, echo=FALSE}
 # B
 SENIC$lev <- hat(model.matrix(mylm))
@@ -162,7 +164,7 @@ n <- dim(model.matrix(mylm))[1]
 H <- (2*p)/n
 
 #Identify high leverage points
-HatOut <- SENIC[lev > (2*p)/n,]
+HatOut <- SENIC[SENIC$lev > (2*p)/n,]
 
 HatPlot <- ggplot(SENIC, aes(y = lev, x = ID)) +
   geom_point() +
@@ -182,7 +184,7 @@ Using the rule of thumb for outlying observations in the X space for the high le
 
 There are 13 high leverage points. 
 
-##C
+## C
 ```{r C2, echo=FALSE}
 # C
 SENIC$CD <- cooks.distance(mylm)
@@ -203,7 +205,7 @@ CookPlot
 ```
 Using the three line values for the Cook's Distance test we can conclude that a few data points pass 2 out of the 3 rules of thumb but no data points have a Cook's Distance greater than 1. So we can conclude that none of these data points warrant a closer look for overall influence. 
 
-##D
+## D
 ```{r D2, echo=FALSE}
 # D
 pairs(SENIC[,-c(1,8,12,14:17,19:23)])
