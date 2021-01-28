@@ -1,0 +1,97 @@
+# Part 1
+library(ggplot2)
+library(tidyr)
+candy_data <- read.table("CandyBars.txt",sep=',',header=TRUE)
+candy_sub <- candy_data[,3:16]
+
+# 1
+#Get variance-covariance matrix
+covmat <- cov(candy_sub)
+covmat
+#Get correlation matrix
+corrmat <- cor(candy_sub)
+corrmat
+
+# 2
+#Get scatterplot matrix
+pairs(~., data=candy_sub)
+#Colormap on correlations
+#install.packages("corrplot") #run first time only
+library(corrplot)
+corrplot(corrmat,method="color")
+
+# 3
+
+ggplot(gather(candy_sub), aes(value)) +
+  geom_histogram(bins = 10) +
+  facet_wrap(~key, scales = 'free')
+
+ggplot(gather(candy_sub), aes(sample = value))+
+  stat_qq() + stat_qq_line() +
+  facet_wrap(~key, scales = 'free')
+
+# 4
+# Graphical Assessment of Multivariate Normality
+x <- as.matrix(candy_sub) # n x p numeric matrix
+center <- colMeans(x) # centroid
+n <- nrow(x); 
+p <- ncol(x); 
+cov <- cov(x); 
+d <- mahalanobis(x,center,cov) # distances 
+qqplot(qchisq(ppoints(n),df=p),d,
+       main="QQ Plot Assessing Multivariate Normality",
+       ylab="Mahalanobis D2")
+abline(a=0,b=1)
+
+# Part 2
+# a
+install.packages("factoextra")
+library(factoextra)
+
+candy_sub1 <- na.omit(candy_data)
+candy_sub1 <- data.frame(candy_sub1[,-2], row.names=candy_sub1[,2])
+candy_sub1 <- candy_sub1[,-1]
+
+# i
+pca <- prcomp(candy_sub1, scale=TRUE)
+
+#Eigenvalues
+get_eigenvalue(pca)
+#Scree plot
+fviz_eig(pca)
+
+# ii
+#Loadings
+loadings <- pca$rotation
+loadings
+
+# iii
+scores <- as.data.frame(pca$x)
+p <- ggplot(data=scores, aes(x=PC1, y=PC2,colour=candy_pca$Brand)) 
+p + geom_hline(yintercept=0) + geom_vline(xintercept=0) + geom_point()
+
+# plot of similar profiles
+fviz_pca_ind(pca,
+             col.ind = as.factor(candy_data$Brand), # Color by the quality of representation
+             repel = TRUE,     # Avoid text overlapping
+             legend.title = "Brands"
+)
+
+# Variable correlation plot
+fviz_pca_var(pca,
+             col.var = "contrib", # Color by contributions to the PC
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE     # Avoid text overlapping
+)
+
+# Biplot with variable correlations 
+fviz_pca_biplot(pca, repel = TRUE,
+                col.var = "#2E9FDF", # Variables color
+                col.ind = "#696969"  # Individuals color
+)
+
+# b
+pca_cov <- prcomp(candy_sub1, scale=FALSE)
+summary(pca_cov)
+loadings_cov <- pca_cov$rotation
+loadings_cov
