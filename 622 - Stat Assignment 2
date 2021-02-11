@@ -1,0 +1,71 @@
+#Demographic Data
+demo <- read.table("Demographics.txt",sep=',',header=TRUE)
+demo$Pop_Size_Group <- as.factor(demo$Pop_Size_Group)
+
+#Part 1
+# 1
+
+#Linear Discriminant Analysis
+library(MASS)
+discrim <- lda(Pop_Size_Group ~ Square_miles + Pct_Age18_to_34 + Pct_65_or_over + Num_physicians + Num_hospital_beds + Num_serious_crimes + Pct_High_Sch_grads + Pct_Bachelors + Pct_below_poverty + Pct_unemployed + Per_cap_income + Total_personal_income, data=demo, na.action="na.omit")
+discrim
+
+# 2
+demo_values <- predict(discrim)
+plotdata <- data.frame(type = demo[,7], lda = demo_values$x)
+library(ggplot2)
+ggplot(plotdata) + geom_point(aes(lda.LD1, lda.LD2, colour = type), size = 2.5) + ggtitle("LDA Plot")
+
+# 3
+library(Rfast)
+vars <- demo[c(-1:-4,-6:-7)]
+sds <- apply(vars,2,sd)
+std.coef <- discrim$scaling*sds
+std.coef
+
+# 4
+#Percent Correct
+discrim.values <- predict(discrim,demo)
+ct <-table(demo$Pop_Size_Group,discrim.values$class)
+ct
+round(sum(diag(prop.table(ct))),2)
+
+# 5
+demo_qda <- qda(Pop_Size_Group ~ Square_miles + Pct_Age18_to_34 + Pct_65_or_over + Num_physicians + Num_hospital_beds + Num_serious_crimes + Pct_High_Sch_grads + Pct_Bachelors + Pct_below_poverty + Pct_unemployed + Per_cap_income + Total_personal_income, data=demo, na.action="na.omit")
+
+demo_qda.values <- predict(demo_qda,demo)
+ct <-table(demo$Pop_Size_Group,demo_qda.values$class)
+ct
+round(sum(diag(prop.table(ct))),2)
+
+# Part 2
+library(CCA)
+library(ggplot2)
+library(GGally)
+
+h_data <- read.table("HBAT.txt",sep=',',header=TRUE)
+h_data$X6...Product.Quality <- as.numeric(h_data$X6...Product.Quality)
+h_data$X13...Competitive.Pricing <- as.numeric(h_data$X13...Competitive.Pricing)
+h_data <- na.omit(h_data)
+X <- as.matrix(cbind(h_data[,7:19]))
+Y <- as.matrix(cbind(h_data[,20:23]))
+
+# A
+correl <- matcor(X,Y)
+img.matcor(correl,type=2)
+
+# B
+h.cca <- cc(X,Y)
+h.cca$xcoef
+h.cca$ycoef
+
+# C
+s1 <- diag(sqrt(diag(cov(X))))
+s1 %*% h.cca$xcoef
+
+s2 <- diag(sqrt(diag(cov(Y))))
+s2 %*% h.cca$ycoef
+
+# D
+barplot(h.cca$cor, xlab="Dimension", ylab="Canonical Correlations")
+plt.cc(h.cca, var.label=TRUE)
