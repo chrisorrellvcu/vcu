@@ -24,11 +24,11 @@ std.coef <- discrim$scaling*sds
 std.coef
 
 # 4
-#Percent Correct
+#Percent incorrect
 discrim.values <- predict(discrim,demo)
 ct <-table(demo$Pop_Size_Group,discrim.values$class)
 ct
-round(sum(diag(prop.table(ct))),2)
+1 - round(sum(diag(prop.table(ct))),2)
 
 # 5
 demo_qda <- qda(Pop_Size_Group ~ Square_miles + Pct_Age18_to_34 + Pct_65_or_over + Num_physicians + Num_hospital_beds + Num_serious_crimes + Pct_High_Sch_grads + Pct_Bachelors + Pct_below_poverty + Pct_unemployed + Per_cap_income + Total_personal_income, data=demo, na.action="na.omit")
@@ -36,7 +36,7 @@ demo_qda <- qda(Pop_Size_Group ~ Square_miles + Pct_Age18_to_34 + Pct_65_or_over
 demo_qda.values <- predict(demo_qda,demo)
 ct <-table(demo$Pop_Size_Group,demo_qda.values$class)
 ct
-round(sum(diag(prop.table(ct))),2)
+1 - round(sum(diag(prop.table(ct))),2)
 
 # Part 2
 library(CCA)
@@ -56,8 +56,7 @@ img.matcor(correl,type=2)
 
 # B
 h.cca <- cc(X,Y)
-h.cca$xcoef
-h.cca$ycoef
+h.cca$cor
 
 # C
 s1 <- diag(sqrt(diag(cov(X))))
@@ -67,5 +66,4 @@ s2 <- diag(sqrt(diag(cov(Y))))
 s2 %*% h.cca$ycoef
 
 # D
-barplot(h.cca$cor, xlab="Dimension", ylab="Canonical Correlations")
 plt.cc(h.cca, var.label=TRUE)
