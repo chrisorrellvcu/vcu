@@ -1,0 +1,95 @@
+library(factoextra)
+library(FactoMineR)
+library(graphics)
+library(rockchalk)
+
+adult_data <- read.table("adult.data.txt",header=TRUE,sep=',')
+
+# sub ?s
+adult_data$native.country <- gsub("?",NA,adult_data$native.country, fixed = TRUE)
+adult_data$WorkClass <- gsub("?",NA,adult_data$WorkClass, fixed = TRUE)
+adult_data$occupation <- gsub("?",NA,adult_data$occupation, fixed = TRUE)
+adult_data <- na.omit(adult_data)
+
+
+# munging data
+cols <- c("native.country", "WorkClass", "occupation", "Over.Under", "sex", "race", "relationship", "marital.status","education")
+adult_data[cols] <- lapply(adult_data[cols], factor) 
+
+adult_data$education <- combineLevels(adult_data$education, levs = c(' 10th',' 11th',' 12th', ' 1st-4th',' 5th-6th',' 7th-8th',' 9th',' Preschool'), newLabel = 'Less than HS')
+adult_data$native.country <- combineLevels(adult_data$native.country, levs = c(' Canada',' Outlying-US(Guam-USVI-etc)',' United-States'), newLabel = 'North America')
+adult_data$native.country <- combineLevels(adult_data$native.country, levs = c(' Dominican-Republic', ' Guatemala',' Haiti', ' Honduras', ' Jamaica', ' Mexico', ' Nicaragua', ' Puerto-Rico', ' Trinadad&Tobago', ' El-Salvador', ' Columbia', ' Ecuador', ' Peru', ' South', ' Cuba'), newLabel = 'Central/South America - Carr')
+adult_data$native.country <- combineLevels(adult_data$native.country, levs = c(' England', ' France', ' Germany', ' Greece', ' Holand-Netherlands', ' Ireland', ' Italy', ' Scotland', ' Portugal', ' Hungary', ' Poland', ' Yugoslavia', ' Iran'), newLabel = 'Europe-ish')
+adult_data$native.country <- combineLevels(adult_data$native.country, levs = c(' Cambodia', ' China', ' Hong', ' India', ' Japan', ' Laos', ' Philippines', ' Taiwan', ' Thailand', ' Vietnam'), newLabel = 'Asia Pacific')
+
+# Part 1
+# A
+cont.table <- table(adult_data$WorkClass, adult_data$education)
+
+
+
+mosaicplot(cont.table,shade=TRUE, las=2)
+chisq <- chisq.test(cont.table)
+chisq
+
+# Yes, the Chi-squared test indicates a high X-squared score along with and extremely small p-value
+
+# B
+ca <- CA(cont.table,graph=FALSE) #correspondence analysis
+summary(ca)
+
+
+fviz_screeplot(ca)
+
+# looking at the summary of the variance it looks like 2 dimensions gets you most of the way there, this is backed up by the Scree plot
+
+fviz_ca_biplot(ca) #Biplot
+# It looks like State and Local government as well as Masters degrees were big contributors to DIM 1. The largest contributions for DIM 2 were Local gov and self-employment along with Prof school
+
+# C
+
+adult_sub <- adult_data[,c('WorkClass','education','marital.status','occupation','relationship','race','sex','native.country','Over.Under')]
+
+mca <- MCA(adult_sub,graph=FALSE)
+summary(mca)
+
+fviz_screeplot(mca,addlabels=TRUE)
+fviz_mca_var(mca, repel = TRUE)
+
+# you can see groupings of the degrees are more advanced in the top left with the lesser educational categories in opposition on the bottom right. It also looks like a lot of the more typical blue collar jobs are asspicated with the less educational catergories.
+
+
+# Part 2
+# A
+library(mdsr)
+library(readxl)
+library(dplyr)
+library(ape)
+library(mclust)
+library(ggplot2)
+library(factoextra)
+shop_data <- read.table("online_shoppers_intention.csv",header=TRUE,sep=',')
+shop_sub <- shop_data[-c(11,16,17:18)]
+
+d <- dist(shop_sub,method="euclidean")
+hier.clust <- hclust(d,method="ward.D")
+
+# I
+plot(hier.clust)
+groups <- cutree(hier.clust,k=3)
+rect.hclust(hier.clust,k=3,border="red")
+
+# II
+aggregate(shop_sub,list(groups),FUN=mean)
+
+# III
+shop_matrix <- as.matrix(shop_sub)
+datascaled <- scale(shop_matrix)
+heatmap(datascaled)
+
+# B
+kmean.clust <- kmeans(shop_sub,3)
+#fviz_nbclust(na.omit(shop_sub),kmeans,method="gap_stat")
+aggregate(shop_matrix,by=list(kmean.clust$cluster),FUN=mean)
+new.data <- data.frame(shop_data, kmean.clust$cluster)
+fviz_cluster(kmean.clust,data=shop_sub)
