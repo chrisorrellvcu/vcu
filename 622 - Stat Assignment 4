@@ -1,0 +1,79 @@
+library(daewr)
+
+
+# 1 
+# data import
+product_display <- read.table("ProductDisplay.txt",header=TRUE,sep=',')
+
+# A
+# fit linear model
+
+PD_LM <- lm(Units.Sold ~ StoreSize*DisplayType*PackageType, data = product_display)
+summary(PD_LM)
+
+
+# B
+
+plot(PD_LM, which = 1)
+plot(PD_LM, which = 2)
+
+# C
+
+interaction.plot(product_display$StoreSize, product_display$DisplayType, product_display$Units.Sold)
+
+# D
+
+
+# 2
+# data import
+paper_data <- read.table("Paper.txt",header=TRUE,sep=',')
+cols <- c("Hardwood","Cooking.Time","Pressure")
+paper_data[cols] <- lapply(paper_data[cols], factor) 
+
+# A
+#Fit ANOVA model
+paper_aov <- aov(Strength ~ Hardwood * Cooking.Time * Pressure, data=paper_data)
+summary(paper_aov)
+
+# B
+
+plot(paper_aov, which = 1)
+plot(paper_aov, which = 2)
+
+# C
+
+interaction.plot(paper_data$Hardwood, paper_data$Pressure, paper_data$Strength)
+
+# D
+
+paper_aov_Tukey <- TukeyHSD(paper_aov)
+paper_aov_Tukey
+
+
+# 3
+marketing_data <- read.table("DirectMarketing.txt",header=TRUE,sep=',')
+
+# A
+market_lm <- lm(Response.Rate ~ A*B*C*D, data = marketing_data)
+summary(market_lm)
+
+# B
+
+# full normal
+fullnormal(coef(market_lm)[-1],alpha=0.025)
+
+# half normal
+par(mfrow=c(1,1))
+LGB(coef(market_lm)[-1],rpt=FALSE)
+
+# C
+marketing_reduced_lm <- lm(Response.Rate ~ A + C + D + B + C:B, data = marketing_data)
+summary(marketing_reduced_lm)
+plot(paper_aov, which = 1)
+plot(paper_aov, which = 2)
+
+# D
+
+interaction.plot(marketing_data$C, marketing_data$B, marketing_data$Response.Rate)
+
+# E
