@@ -1,0 +1,42 @@
+library(faraway)
+library(ggplot2)
+library(lme4)
+library(lmerTest)
+
+housedata <- read.table("hprice.txt",header=TRUE)
+housedata$rcdum <- as.factor(housedata$rcdum)
+housedata$ajwtr <- as.factor(housedata$ajwtr)
+
+# 1
+ggplot(housedata, aes(x=time, y=narsp)) + geom_line()
+ggplot(housedata, aes(x=time, y=narsp)) + geom_line() + facet_wrap(~msa)
+
+# on average housing prices have risen in most, if not all MSAs
+
+# 2
+
+houselm <- lm(narsp ~ ., data=housedata)
+summary(houselm)
+
+# everything is significant 
+
+# 3
+
+houselm2 <- lm(narsp ~ ypc + perypc + regtest + rcdum + ajwtr + time, data=housedata)
+summary(houselm2)
+
+# the r-squared isn't really impacted and adjacent to coastline becomes not significant
+
+# 4
+
+ggplot(housedata, aes(x=time, y=ypc)) + geom_line() + facet_wrap(~msa)
+ggplot(housedata, aes(x=time, y=perypc)) + geom_line() + facet_wrap(~msa)
+
+# 5
+
+# 6
+housedata$cyear <- housedata$time - 5
+
+# 7
+
+# 8
