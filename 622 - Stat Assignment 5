@@ -2,14 +2,15 @@ library(faraway)
 library(ggplot2)
 library(lme4)
 library(lmerTest)
+library(dplyr)
 
 housedata <- read.table("hprice.txt",header=TRUE)
 housedata$rcdum <- as.factor(housedata$rcdum)
 housedata$ajwtr <- as.factor(housedata$ajwtr)
+housedata$msa <- as.factor(housedata$msa)
 
 # 1
-ggplot(housedata, aes(x=time, y=narsp)) + geom_line()
-ggplot(housedata, aes(x=time, y=narsp)) + geom_line() + facet_wrap(~msa)
+ggplot(housedata, aes(x=time, y=narsp, group = msa)) + geom_line()
 
 # on average housing prices have risen in most, if not all MSAs
 
@@ -18,25 +19,59 @@ ggplot(housedata, aes(x=time, y=narsp)) + geom_line() + facet_wrap(~msa)
 houselm <- lm(narsp ~ ., data=housedata)
 summary(houselm)
 
-# everything is significant 
+# there are a lot of MSAs that are not really significant, the r squared is really high
 
 # 3
 
 houselm2 <- lm(narsp ~ ypc + perypc + regtest + rcdum + ajwtr + time, data=housedata)
 summary(houselm2)
 
-# the r-squared isn't really impacted and adjacent to coastline becomes not significant
+# pretty much everything becomes significant other than adjacnet to coastline
 
 # 4
 
-ggplot(housedata, aes(x=time, y=ypc)) + geom_line() + facet_wrap(~msa)
-ggplot(housedata, aes(x=time, y=perypc)) + geom_line() + facet_wrap(~msa)
+ggplot(housedata, aes(x=time, y=ypc, group = msa)) + geom_line()
+ggplot(housedata, aes(x=time, y=perypc, group = msa)) + geom_line()
 
 # 5
 
+# create new variable
+
+housedata2 <- housedata %>%
+  group_by(msa) %>%
+  mutate(ypc1 = rep(ypc, row_number()==1))
+
+housedata2 <- as.data.frame(housedata2)
+
+# refit model
+
+houselm3 <- lm(narsp ~ ypc1 + perypc + regtest + rcdum + ajwtr + time, data=housedata2)
+summary(houselm3)
+
+# compare models
+
+anova(houselm2, houselm3)
+
+# they are the same?
+
 # 6
-housedata$cyear <- housedata$time - 5
+# housedata$cyear <- housedata$time - 5
+
+housemmod <- lmer(narsp ~ ypc1 + perypc + regtest + rcdum + ajwtr + time + (1|msa), data=housedata2)
+summary(housemmod)
+
+#
+
+qqnorm(residuals(housemmod))
+plot(fitted(housemmod),residuals(housemmod))
 
 # 7
+housemmod2 <- lmer(narsp ~ ypc1 + perypc + regtest + rcdum + ajwtr + time + (time|msa), data=housedata2)
+summary(housemmod2)
+
+qqnorm(residuals(housemmod2))
+plot(fitted(housemmod2),residuals(housemmod2))
 
 # 8
+
+anova(housemmod, housemmod2)
