@@ -1,0 +1,129 @@
+library(fpp3)
+library(seasonal)
+
+# tsibble objects
+
+library(tsibble)
+
+# Question 2.10.7
+# normal plot
+aus_arrivals %>%
+  autoplot() + labs(title = 'Austrailia Arrivals by Country')
+
+aus_arrivals %>%
+  gg_season(Arrivals) + labs(title = 'Austrailia Arrivals by County')
+
+aus_arrivals %>%
+  gg_subseries(Arrivals) + labs(title = 'Austrailia Arrivals by County')
+
+#ACF plot 
+#aus_arrivals %>%
+#  ACF(Arrivals, lag_max = 48) %>%
+#  autoplot() + labs(title = 'AUS arrivals by Country')
+
+#---------------------------------------------------------------------------------------------------------------------
+
+# Question 5.11.9
+# a Create a training set for household wealth (hh_budget) by withholding the last four years as a test set.
+budget_train <- hh_budget %>%
+  filter(Year < 2013)
+
+# b Fit all the appropriate benchmark methods to the training set and forecast the periods covered by the test set.
+budget_fit <- budget_train %>%
+  model(
+    Mean = MEAN(Wealth),
+    Naive = NAIVE(Wealth),
+    Drift = RW(Wealth ~ drift())
+  )
+budget_fc <- budget_fit %>% 
+  forecast(h = 4)
+
+# c Compute the accuracy of your forecasts. Which method does best?
+budget_fc %>%
+  autoplot(hh_budget, level = NULL) +
+  labs(y = "Wealth",title = "Forecasts for Yearly Wealth") +
+  guides(colour = guide_legend(title = "Forecast"))
+
+accuracy(budget_fc, hh_budget) %>%
+  arrange(Country, RMSE) %>%
+  group_by(Country) %>%
+  filter(row_number()==1)
+
+# d Do the residuals from the best method resemble white noise?
+hh_budget %>% filter(Country == 'Australia') %>%
+  model(RW(Wealth ~ drift())) %>% 
+  gg_tsresiduals()
+
+hh_budget %>% filter(Country == 'Canada') %>%
+  model(RW(Wealth ~ drift())) %>% 
+  gg_tsresiduals()
+
+hh_budget %>% filter(Country == 'Japan') %>%
+  model(RW(Wealth ~ drift())) %>% 
+  gg_tsresiduals()
+
+hh_budget %>% filter(Country == 'USA') %>%
+  model(RW(Wealth ~ drift())) %>% 
+  gg_tsresiduals()
+
+#----------------------------------------------------------------------------------------------------------------------------------
+
+# Question 3.7.10
+# a Plot the data using autoplot(), gg_subseries() and gg_season() to look at the effect of the changing seasonality over time.
+autoplot(canadian_gas, Volume) + labs(title = 'Canadian Gas Production', y = 'Volumne (b - cubic meters)')
+
+canadian_gas %>%
+  gg_season(Volume) + labs(title = 'Canadian Gas Production', y = 'Volumne (b - cubic meters)')
+
+canadian_gas %>%
+  gg_subseries(Volume) + labs(title = 'Canadian Gas Production', y = 'Volumne (b - cubic meters)')
+
+# b Do an STL decomposition of the data. You will need to choose a seasonal window to allow for the changing shape of the seasonal component.
+canadian_gas %>%
+  model(STL(Volume ~ season(window = "periodic"),
+        robust = TRUE)) %>%
+  components() %>%
+  autoplot()
+
+dcmp_model <- canadian_gas %>%
+  model(STL(Volume ~ season(window = 13), robust = TRUE)) %>% 
+  components()
+
+dcmp_model %>%
+  autoplot()
+
+# c How does the seasonal shape change over time? [Hint: Try plotting the seasonal component using gg_season().]
+dcmp_model %>%
+  autoplot(season_year)
+
+# d Can you produce a plausible seasonally adjusted series?
+dcmp_model %>%
+  as_tsibble() %>%
+  autoplot(Volume, color = 'gray') +
+  geom_line(aes(y=season_adjust), colour = 'darkgreen') +
+  labs(y= 'Volumne (b - cubic meters)', title = 'Canadian Gas Production')
+
+# e Compare the results with those obtained using SEATS and X-11. How are they different?
+x11_dcmp <- canadian_gas %>%
+  model(x11 = X_13ARIMA_SEATS(Volume ~ x11())) %>%
+  components()
+autoplot(x11_dcmp) +
+  labs(title = "Decomposition of Volume using X-11.")
+
+canadian_gas %>%
+  autoplot(Volume, color='gray') +
+  autolayer(x11_dcmp, season_adjust, color='blue') +
+  xlab("Year") + ylab("Volume") +
+  ggtitle("Total Volume x-11")
+
+seats_dcmp <- canadian_gas %>%
+  model(seats = X_13ARIMA_SEATS(Volume ~ seats())) %>%
+  components()
+autoplot(seats_dcmp) +
+  labs(title = "Decomposition of Volume using SEATS")
+
+canadian_gas %>%
+  autoplot(Volume, color='gray') +
+  autolayer(seats_dcmp, season_adjust, color='blue') +
+  xlab("Year") + ylab("Volume") +
+  ggtitle("Total Volume SEATS")
