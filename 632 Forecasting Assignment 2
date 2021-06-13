@@ -1,0 +1,182 @@
+library(fpp3)
+library(tsibble)
+
+# 8.8.8 
+# Recall your retail time series data (from Exercise 8 in Section 2.10).
+
+set.seed(314)
+retail_df <- aus_retail %>%
+  filter(`Series ID` == sample(aus_retail$`Series ID`,1))
+
+retail_df %>%
+  autoplot()
+
+# a Why is multiplicative seasonality necessary for this series?
+
+gg_season(retail_df)
+
+# Multiplicative seasonality is necessary because the seasonal variations are not constant through the series.
+# The seasonal changes are changing proportional to the level of the series. 
+
+# b Apply Holt-Winters' multiplicative method to the data. Experiment with making the trend damped
+
+retail_df %>%
+  filter_index("1988 Apr" ~ "2018 Feb") %>%
+  model(
+    `Holt's method` = ETS(Turnover ~ error("M") + trend("A") + season("M")),
+    `Damped Holt's method` = ETS(Turnover ~ error("M") + trend("Ad") + season("M"))
+  )%>%
+  forecast(h = 10) %>%
+  autoplot(retail_df %>% filter(year(Month) >= 2010)) +
+  ggtitle("Forecasts from Holt's method") + xlab("Year") +
+  ylab("Retail Turnover") +
+  guides(colour = guide_legend(title = "Forecast"))
+
+retail_df %>%
+  model(
+    `Holt's method` = ETS(Turnover ~ error("M") + trend("A") + season("M")),
+    `Damped Holt's method` = ETS(Turnover ~ error("M") + trend("Ad") + season("M"))
+  )%>%
+  forecast(h = 10) %>%
+  autoplot(retail_df %>% filter(year(Month) >= 2010)) +
+  ggtitle("Forecasts from Holt's method") + xlab("Year") +
+  ylab("Retail Turnover") +
+  guides(colour = guide_legend(title = "Forecast"))
+
+# c Compare the RMSE of the one-step forecasts from the two methods. Which do you prefer?
+
+retail_df %>%
+  stretch_tsibble(.init = 10) %>%
+  model(
+    `Holt's method` = ETS(Turnover ~ error("M") + trend("A") + season("M")),
+    `Damped Holt's method` = ETS(Turnover ~ error("M") + trend("Ad") + season("M"))
+  )%>%
+  forecast(h = 1) %>%
+  accuracy(retail_df)
+
+# d Check that the residuals from the best method look like white noise.
+
+retail_df %>%
+  model(
+    `Damped Holt's method` = ETS(Turnover ~ error("M") + trend("Ad") + season("M"))
+  )%>%
+  gg_tsresiduals()
+
+# e Now find the test set RMSE, while training the model to the end of 2010. Can you beat the seasonal naive approach from Exercise 7 in Section 5.11?
+
+retail_train <- retail_df %>%
+  filter(year(Month) <= 2010)
+
+retail_train %>%
+  model('SNAIVE' = SNAIVE(Turnover), 
+        "Damped Holt's method" = ETS(Turnover ~ error("M") + trend("Ad") + season("M"))
+        ) %>%
+  accuracy()
+
+# 9.11.5 
+# For your retail data (from Exercise 8 in Section 2.10), find the appropriate order of differencing (after transformation if necessary) to obtain stationary data.
+
+set.seed(314)
+retail_df <- aus_retail %>%
+  filter(`Series ID` == sample(aus_retail$`Series ID`,1))
+retail_df %>%
+  autoplot()
+
+retail_df %>%
+  autoplot(log(Turnover))
+
+retail_df %>%
+  features(log(Turnover), unitroot_nsdiffs)
+
+retail_df <-  retail_df %>%
+  mutate(diff12_log_Turnover = difference(log(Turnover), 12))
+
+retail_df %>%
+  features(diff12_log_Turnover, unitroot_ndiffs)
+
+retail_df <-  retail_df %>%
+  mutate(diff1_diff12_log_Turnover = difference(diff12_log_Turnover, 1))
+
+retail_df %>%
+  features(diff1_diff12_log_Turnover, unitroot_kpss)
+
+retail_df %>%
+  autoplot(diff1_diff12_log_Turnover)
+
+# 9.11.8
+# For the United States GDP series (from global_economy)
+
+global_df <- global_economy %>%
+  filter(Country == 'United States')
+
+
+# a if necessary, find a suitable Box-Cox transformation for the data
+
+global_df <- global_df %>%
+  mutate(Log_GDP = log(GDP))
+
+# b fit a suitable ARIMA model to the transformed data using ARIMA()
+
+fit1 <- global_df %>%
+  model(ARIMA(Log_GDP))
+
+report(fit1)
+
+# c try some other plausible models by experimenting with the orders chosen
+
+global_df %>%
+  features(difference(difference(Log_GDP)), unitroot_kpss)
+
+global_df %>%
+  gg_tsdisplay(difference(difference(Log_GDP)), plot_type = 'partial')
+
+fit2 <- global_df %>%
+  model(ARIMA(log(GDP) ~ pdq(p=1:4, d=0:2, q=0:2)))
+report(fit2)
+
+fit3 <- global_df %>%
+  model(arima221 = ARIMA(log(GDP) ~ pdq(2,2,1)),
+        arima121 = ARIMA(log(GDP) ~ pdq(1,2,1)),
+        Stepwise = ARIMA(log(GDP)),
+        search = ARIMA(log(GDP), stepwise = FALSE))
+
+fit3 %>% pivot_longer(!Country, names_to = "Model name",
+                         values_to = "Orders")
+
+
+# d choose what you think is the best model and check the residual diagnostics
+
+glance(fit3) %>% arrange(AICc) %>% select(.model:BIC)
+
+fit3 %>%
+  select(search) %>%
+  gg_tsresiduals()
+
+# e produce forecasts of your fitted model. Do the forecasts look reasonable?
+
+fit3 %>%
+  forecast(h=5) %>%
+  filter(.model=='search') %>%
+  autoplot(global_df)
+
+# f compare the results with what you would obtain using ETS() (with no transformation)
+
+global_df %>%
+  model(
+    ETS(GDP)
+  )%>%
+  forecast(h = 5) %>%
+  autoplot(global_df) +
+  ggtitle("Forecasts from ETS") + xlab("Year") +
+  ylab("GDP") +
+  guides(colour = guide_legend(title = "Forecast"))
+
+
+global_df %>%
+  stretch_tsibble(.init = 10) %>%
+  model(
+    ETS(GDP),
+    ARIMA(log(GDP), stepwise = FALSE)
+  ) %>%
+  forecast(h = 1) %>%
+  accuracy(global_df)
