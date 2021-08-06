@@ -1,0 +1,572 @@
+library(plyr)
+library(dplyr)
+library(data.table)
+library(tidyr)
+library(reshape2)
+setwd("C:/Users/chris/School Files/Practicum/Data")
+
+
+#-------------------------STUDENT---------------------------------------
+
+# load and rename data
+student_df <- read.csv("student/student.csv")
+
+student_df <- rename(student_df, StudentID = ï..StudentID)
+
+student_rank_df <- read.csv("student/student_rank.csv")
+
+student_rank_df <-rename(student_rank_df, StudentID = ï..StudentID)
+
+student_scholar_df <- read.csv("student/student_scholarships.csv")
+
+student_scholar_df <- rename(student_scholar_df, StudentID = ï..StudentID)
+
+# check for dups
+
+student_df[duplicated(student_df$StudentID),]
+
+student_rank_df[duplicated(student_rank_df$StudentID),]
+
+student_scholar_df[duplicated(student_scholar_df$StudentID),]
+
+# sum scholarship data
+
+student_scholar_df <- student_scholar_df %>%
+  group_by(StudentID) %>%
+  summarise(TotalAmount = sum(Amount))
+
+# join student data
+
+student_main <- join_all(list(student_df, student_rank_df, student_scholar_df), by = 'StudentID', type = 'left')
+
+student_main$TotalAmount[is.na(student_main$TotalAmount)] <- 0
+
+#-------------------------ADMISSIONS---------------------------------------
+
+ad_birth_df <- read.csv("admissions/admissions_birth_info.csv")
+ad_birth_df <- rename(ad_birth_df, StudentID = ï..StudentID)
+
+ad_data_df <- read.csv("admissions/admissions_data.csv")
+ad_data_df <- rename(ad_data_df, StudentID = ï..StudentID)
+
+ad_mcat_2015_df <- read.csv("admissions/student_mcat_2015.csv")
+ad_mcat_2015_df <- rename(ad_mcat_2015_df, StudentID = ï..StudentID)
+
+ad_mmi_df <- read.csv("admissions/student_mmi.csv")
+ad_mmi_df <- rename(ad_mmi_df, StudentID = ï..StudentID)
+
+# check for dups
+
+ad_birth_df[duplicated(ad_birth_df$StudentID),]
+
+ad_data_df[duplicated(ad_data_df$StudentID),]
+
+ad_mcat_2015_df[duplicated(ad_mcat_2015_df$StudentID),]
+
+ad_mmi_df[duplicated(ad_mmi_df$StudentID),]
+
+# pull latest app year for birth info and data
+
+ad_birth_df <- ad_birth_df %>%
+  group_by(StudentID) %>%
+  filter(ApplicationYear == max(ApplicationYear)) %>%
+  distinct
+
+ad_data_df <- ad_data_df %>%
+  group_by(StudentID) %>%
+  filter(AppYear == max(AppYear)) %>%
+  distinct
+
+# pull max mcat
+
+ad_mcat_2015_df <- ad_mcat_2015_df %>%
+  group_by(StudentID) %>%
+  filter(Total == max(Total)) %>%
+  distinct
+
+# pull min mmi interview rank, should be the first try
+
+ad_mmi_df <- ad_mmi_df %>%
+  group_by(StudentID) %>%
+  select(StudentID, AppID, ApplicantInterviewID, AppYear, CurrentCohort, InterviewDate, InterviewRank, OriginalCohort) %>%
+  filter(InterviewRank == min(InterviewRank)) %>%
+  distinct
+
+# join admissions data
+
+student_main <- merge(student_main, ad_birth_df, by = 'StudentID', all.x = TRUE)
+
+student_main <- merge(student_main, ad_data_df, by = 'StudentID', all.x = TRUE)
+
+student_main <- merge(student_main, ad_mcat_2015_df, by = 'StudentID', all.x = TRUE)
+
+student_main <- merge(student_main, ad_mmi_df, by = 'StudentID', all.x = TRUE)
+
+
+#-------------------------NBME---------------------------------------
+
+nbme_prac_df <- read.csv("nbme/practice_nbme.csv")
+nbme_prac_df <- rename(nbme_prac_df, StudentID = ï..StudentID)
+
+nbme_board_df <- read.csv("nbme/student_national_boards.csv")
+nbme_board_df <- rename(nbme_board_df, StudentID = ï..StudentID)
+
+# check for dups
+
+nbme_prac_df[duplicated(nbme_prac_df$StudentID),]
+
+nbme_board_df[duplicated(nbme_board_df$StudentID),]
+
+# remove CS rows & pull only first attempt
+
+nbme_board_df <- nbme_board_df %>%
+  group_by(StudentID) %>%
+  filter(TestType != 'CS')
+
+nbme_board_df <- nbme_board_df %>%
+  group_by(StudentID, Step) %>%
+  filter(StudentBoardsID == min(StudentBoardsID)) %>%
+  distinct
+
+# create 3 dfs for step 1 - 3 scores and then remerge
+
+nbme_board_df_step1 <- nbme_board_df %>%
+  filter(Step == 1) %>%
+  select(StudentID, TestDate, Score3, Result) %>%
+  rename(Step1 = Score3)
+
+nbme_board_df_step2 <- nbme_board_df %>%
+  filter(Step == 2) %>%
+  select(StudentID, TestDate, Score3, Result) %>%
+  rename(Step2 = Score3)
+
+nbme_board_df_step3 <- nbme_board_df %>%
+  filter(Step == 3) %>%
+  select(StudentID, TestDate, Score3, Result) %>%
+  rename(Step3 = Score3)
+
+nbme_board_main <- merge(nbme_board_df_step1, nbme_board_df_step2, by = "StudentID", all.x = TRUE)
+
+nbme_board_main <- merge(nbme_board_main, nbme_board_df_step3, by = "StudentID", all.x = TRUE)
+
+# merge with main df
+
+student_main <- merge(student_main, nbme_prac_df, by = "StudentID", all.x = TRUE)
+student_main <- rename(student_main, PracScore = Score)
+
+student_main <- merge(student_main, nbme_board_main, by = "StudentID", all.x = TRUE)
+
+
+#-------------------------COURSE GRADES---------------------------------------
+
+cg_2019_df <- read.csv("course_grades/course_grades_2019.csv")
+cg_2019_df <- rename(cg_2019_df, StudentID = ï..StudentID)
+cg_2019_df <- select(cg_2019_df, -c(BirthMonth, BirthYear, Ethnicity, GenderCode, CurrentGradYear, OriginalGradYear, HasLOA, OffCycle))
+cg_2019_df[cg_2019_df=='NULL'] <- NA
+
+# dont need MDPHD students
+cg_2019_df <- cg_2019_df %>%
+  filter(MDPHD == 0)
+
+# remove that field
+cg_2019_df <- select(cg_2019_df, -c(MDPHD))
+
+# add year col
+cg_2019_df$Year <- '2019'
+
+# separate out M3 exams because they are consistent across the years
+cg_2019_M3 <- cg_2019_df %>%
+  select(StudentID, M3_Ambulatory_Division:Year) %>%
+  relocate(Year, .after = StudentID)
+
+cg_2019_df <- cg_2019_df %>%
+  relocate(Year, .after = StudentID)
+
+cg_2019_df <- melt(cg_2019_df, id.vars = c('StudentID','Year'))
+
+cg_2019_df <- cg_2019_df %>%
+  rename(Course_Name = variable, Course_Score = value)
+
+cg_2019_df$M_label <- substr(cg_2019_df$Course_Name,1,2)
+
+#--------------------------------------------------------------------------------
+
+cg_2020_df <- read.csv("course_grades/course_grades_2020.csv")
+cg_2020_df <- rename(cg_2020_df, StudentID = ï..StudentID)
+cg_2020_df <- select(cg_2020_df, -c(BirthMonth, BirthYear, Ethnicity, GenderCode, CurrentGradYear, OriginalGradYear, HasLOA, OffCycle))
+cg_2020_df[cg_2020_df=='NULL'] <- NA
+
+cg_2020_df <- cg_2020_df %>%
+  filter(MDPHD == 0)
+
+cg_2020_df <- select(cg_2020_df, -c(MDPHD))
+
+cg_2020_df$Year <- '2020'
+
+# separate out M3 exams because they are consistent across the years
+cg_2020_M3 <- cg_2020_df %>%
+  select(StudentID, M3_Ambulatory_Division:Year) %>%
+  relocate(Year, .after = StudentID)
+
+cg_2020_df <- cg_2020_df %>%
+  relocate(Year, .after = StudentID)
+
+cg_2020_df <- melt(cg_2020_df, id.vars = c('StudentID','Year'))
+
+cg_2020_df <- cg_2020_df %>%
+  rename(Course_Name = variable, Course_Score = value)
+
+cg_2020_df$M_label <- substr(cg_2020_df$Course_Name,1,2)
+
+#--------------------------------------------------------------------------------
+
+cg_2021_df <- read.csv("course_grades/course_grades_2021.csv")
+cg_2021_df <- rename(cg_2021_df, StudentID = ï..StudentID)
+cg_2021_df <- select(cg_2021_df, -c(BirthMonth, BirthYear, Ethnicity, GenderCode, CurrentGradYear, OriginalGradYear, HasLOA, OffCycle))
+cg_2021_df[cg_2021_df=='NULL'] <- NA
+
+cg_2021_df <- cg_2021_df %>%
+  filter(MDPHD == 0)
+
+cg_2021_df <- select(cg_2021_df, -c(MDPHD))
+
+cg_2021_df$Year <- '2021'
+
+# separate out M3 exams because they are consistent across the years
+cg_2021_M3 <- cg_2021_df %>%
+  select(StudentID, M3_Ambulatory_Division:Year) %>%
+  relocate(Year, .after = StudentID)
+
+cg_2021_df <- cg_2021_df %>%
+  relocate(Year, .after = StudentID)
+
+cg_2021_df <- melt(cg_2021_df, id.vars = c('StudentID','Year'))
+
+cg_2021_df <- cg_2021_df %>%
+  rename(Course_Name = variable, Course_Score = value)
+
+cg_2021_df$M_label <- substr(cg_2021_df$Course_Name,1,2)
+
+#--------------------------------------------------------------------------------
+
+cg_2022_df <- read.csv("course_grades/course_grades_2022.csv")
+cg_2022_df <- rename(cg_2022_df, StudentID = ï..StudentID)
+cg_2022_df <- select(cg_2022_df, -c(BirthMonth, BirthYear, Ethnicity, GenderCode, CurrentGradYear, OriginalGradYear, HasLOA, OffCycle))
+cg_2022_df[cg_2022_df=='NULL'] <- NA
+
+cg_2022_df <- cg_2022_df %>%
+  filter(MDPHD == 0)
+
+cg_2022_df <- select(cg_2022_df, -c(MDPHD))
+
+cg_2022_df$Year <- '2022'
+
+# separate out M3 exams because they are consistent across the years
+cg_2022_M3 <- cg_2022_df %>%
+  select(StudentID, M3_Ambulatory_Division:Year) %>%
+  relocate(Year, .after = StudentID)
+
+cg_2022_df <- cg_2022_df %>%
+  relocate(Year, .after = StudentID)
+
+cg_2022_df <- melt(cg_2022_df, id.vars = c('StudentID','Year'))
+
+cg_2022_df <- cg_2022_df %>%
+  rename(Course_Name = variable, Course_Score = value)
+
+cg_2022_df$M_label <- substr(cg_2022_df$Course_Name,1,2)
+
+#--------------------------------------------------------------------------------
+
+cg_2023_df <- read.csv("course_grades/course_grades_2023.csv")
+cg_2023_df <- rename(cg_2023_df, StudentID = ï..StudentID)
+cg_2023_df <- select(cg_2023_df, -c(BirthMonth, BirthYear, Ethnicity, GenderCode, CurrentGradYear, OriginalGradYear, HasLOA, OffCycle))
+cg_2023_df[cg_2023_df=='NULL'] <- NA
+
+cg_2023_df <- cg_2023_df %>%
+  filter(MDPHD == 0)
+
+cg_2023_df <- select(cg_2023_df, -c(MDPHD))
+
+cg_2023_df$Year <- '2023'
+
+# separate out M3 exams because they are consistent across the years, no M3 for 2024 so this will error
+cg_2023_M3 <- cg_2023_df %>%
+  select(StudentID, M3_Ambulatory_Division:Year) %>%
+  relocate(Year, .after = StudentID)
+
+cg_2023_df <- cg_2023_df %>%
+  relocate(Year, .after = StudentID)
+
+cg_2023_df <- melt(cg_2023_df, id.vars = c('StudentID','Year'))
+
+cg_2023_df <- cg_2023_df %>%
+  rename(Course_Name = variable, Course_Score = value)
+
+cg_2023_df$M_label <- substr(cg_2023_df$Course_Name,1,2)
+
+#--------------------------------------------------------------------------------
+
+cg_2024_df <- read.csv("course_grades/course_grades_2024.csv")
+cg_2024_df <- rename(cg_2024_df, StudentID = ï..StudentID)
+cg_2024_df <- select(cg_2024_df, -c(BirthMonth, BirthYear, Ethnicity, GenderCode, CurrentGradYear, OriginalGradYear, HasLOA, OffCycle))
+cg_2024_df[cg_2024_df=='NULL'] <- NA
+
+cg_2024_df <- cg_2024_df %>%
+  filter(MDPHD == 0)
+
+cg_2024_df <- select(cg_2024_df, -c(MDPHD))
+
+cg_2024_df$Year <- '2024'
+
+# separate out M3 exams because they are consistent across the years, no M3 for 2024 so this will error
+cg_2024_M3 <- cg_2024_df %>%
+  select(StudentID, M3_Ambulatory_Division:Year) %>%
+  relocate(Year, .after = StudentID)
+
+cg_2024_df <- cg_2024_df %>%
+  relocate(Year, .after = StudentID)
+
+cg_2024_df <- melt(cg_2024_df, id.vars = c('StudentID','Year'))
+
+cg_2024_df <- cg_2024_df %>%
+  rename(Course_Name = variable, Course_Score = value)
+
+cg_2024_df$M_label <- substr(cg_2024_df$Course_Name,1,2)
+
+#--------------------------------------------------------------------------------
+
+# append all course grade files to create a total data frame and a M3 only data frame
+
+cg_df <- rbind(cg_2019_df, cg_2020_df, cg_2021_df, cg_2022_df, cg_2023_df, cg_2024_df)
+
+# only select M1 & M2
+cg_df <- cg_df %>%
+  filter(M_label == 'M1' | M_label == 'M2')
+
+cg_df$Course_Score <- as.numeric(cg_df$Course_Score)
+
+cg_avg_df <- cg_df %>%
+  group_by(StudentID, Course_Name) %>%
+  filter(Course_Score == min(Course_Score)) %>%
+  group_by(StudentID, M_label) %>%
+  summarise(Avg_Course_Score = mean(Course_Score))
+
+cg_M1 <- cg_avg_df %>%
+  filter(M_label == 'M1') %>%
+  select(-M_label) %>%
+  rename(M1_Avg = Avg_Course_Score)
+
+cg_M2 <- cg_avg_df %>%
+  filter(M_label == 'M2') %>%
+  select(-M_label) %>%
+  rename(M2_Avg = Avg_Course_Score)
+
+cg_M3 <- rbind(cg_2019_M3, cg_2020_M3, cg_2021_M3, cg_2022_M3)
+
+cg_M3 <- cg_M3 %>%
+  select(-Year) %>%
+  mutate_if(is.character,as.numeric)
+
+cg_M3 <- cg_M3 %>% 
+  group_by(StudentID) %>%
+  summarise(
+    M3_Ambulatory_Division = min(M3_Ambulatory_Division),
+    M3_Family_Medicine_Division = min(M3_Family_Medicine_Division),
+    M3_Internal_Medicine_Division = min(M3_Internal_Medicine_Division),
+    M3_Neurology_Division = min(M3_Neurology_Division),
+    M3_Obstetrics_and_Gynecology_Division = min(M3_Obstetrics_and_Gynecology_Division),
+    M3_Pediatrics_Division = min(M3_Pediatrics_Division),
+    M3_Psychiatry_Division = min(M3_Psychiatry_Division),
+    M3_Surgery_Division = min(M3_Surgery_Division)
+  ) %>%
+  arrange(StudentID)
+
+# join with main
+
+student_main <- merge(student_main, cg_M1, by = "StudentID", all.x = TRUE)
+student_main <- merge(student_main, cg_M2, by = "StudentID", all.x = TRUE)
+student_main <- merge(student_main, cg_M3, by = "StudentID", all.x = TRUE)
+
+#----------------------------Exam Grades------------------------------------------
+
+
+# exam grade
+
+eg_2019_df <- read.csv("course_grades/exam_grades_2019.csv")
+eg_2019_df <- rename(eg_2019_df, StudentID = ï..StudentID)
+eg_2019_df[eg_2019_df=='NULL'] <- NA
+eg_2019_df$Year <- '2019'
+
+eg_2019_df <- eg_2019_df %>%
+  relocate(Year, .after = StudentID)
+
+eg_2019_df <- melt(eg_2019_df, id.vars = c('StudentID','Year'))
+
+eg_2019_df <- eg_2019_df %>%
+  rename(Exam_Name = variable, Exam_Score = value)
+
+eg_2019_df$M_label <- substr(eg_2019_df$Exam_Name,1,2)
+
+#--------------------------------------------------------------------------------
+
+eg_2020_df <- read.csv("course_grades/exam_grades_2020.csv")
+eg_2020_df <- rename(eg_2020_df, StudentID = ï..StudentID)
+eg_2020_df[eg_2020_df=='NULL'] <- NA
+eg_2020_df$Year <- '2020'
+
+eg_2020_df <- eg_2020_df %>%
+  relocate(Year, .after = StudentID)
+
+eg_2020_df <- melt(eg_2020_df, id.vars = c('StudentID','Year'))
+
+eg_2020_df <- eg_2020_df %>%
+  rename(Exam_Name = variable, Exam_Score = value)
+
+eg_2020_df$M_label <- substr(eg_2020_df$Exam_Name,1,2)
+
+#--------------------------------------------------------------------------------
+
+eg_2021_df <- read.csv("course_grades/exam_grades_2021.csv")
+eg_2021_df <- rename(eg_2021_df, StudentID = ï..StudentID)
+eg_2021_df[eg_2021_df=='NULL'] <- NA
+eg_2021_df$Year <- '2021'
+
+eg_2021_df <- eg_2021_df %>%
+  relocate(Year, .after = StudentID)
+
+eg_2021_df <- melt(eg_2021_df, id.vars = c('StudentID','Year'))
+
+eg_2021_df <- eg_2021_df %>%
+  rename(Exam_Name = variable, Exam_Score = value)
+
+eg_2021_df$M_label <- substr(eg_2021_df$Exam_Name,1,2)
+
+#--------------------------------------------------------------------------------
+
+eg_2022_df <- read.csv("course_grades/exam_grades_2022.csv")
+eg_2022_df <- rename(eg_2022_df, StudentID = ï..StudentID)
+eg_2022_df[eg_2022_df=='NULL'] <- NA
+eg_2022_df$Year <- '2022'
+
+eg_2022_df <- eg_2022_df %>%
+  relocate(Year, .after = StudentID)
+
+eg_2022_df <- melt(eg_2022_df, id.vars = c('StudentID','Year'))
+
+eg_2022_df <- eg_2022_df %>%
+  rename(Exam_Name = variable, Exam_Score = value)
+
+eg_2022_df$M_label <- substr(eg_2022_df$Exam_Name,1,2)
+
+#--------------------------------------------------------------------------------
+
+eg_2023_df <- read.csv("course_grades/exam_grades_2023.csv")
+eg_2023_df <- rename(eg_2023_df, StudentID = ï..StudentID)
+eg_2023_df[eg_2023_df=='NULL'] <- NA
+eg_2023_df$Year <- '2023'
+
+eg_2023_df <- eg_2023_df %>%
+  relocate(Year, .after = StudentID)
+
+eg_2023_df <- melt(eg_2023_df, id.vars = c('StudentID','Year'))
+
+eg_2023_df <- eg_2023_df %>%
+  rename(Exam_Name = variable, Exam_Score = value)
+
+eg_2023_df$M_label <- substr(eg_2023_df$Exam_Name,1,2)
+
+#--------------------------------------------------------------------------------
+
+eg_2024_df <- read.csv("course_grades/exam_grades_2024.csv")
+eg_2024_df <- rename(eg_2024_df, StudentID = ï..StudentID)
+eg_2024_df[eg_2024_df=='NULL'] <- NA
+eg_2024_df$Year <- '2024'
+
+eg_2024_df <- eg_2024_df %>%
+  relocate(Year, .after = StudentID)
+
+eg_2024_df <- melt(eg_2024_df, id.vars = c('StudentID','Year'))
+
+eg_2024_df <- eg_2024_df %>%
+  rename(Exam_Name = variable, Exam_Score = value)
+
+eg_2024_df$M_label <- substr(eg_2024_df$Exam_Name,1,2)
+
+
+# merge all data frames
+
+eg_df <- rbind(eg_2019_df, eg_2020_df, eg_2021_df, eg_2022_df, eg_2023_df, eg_2024_df)
+
+eg_df$Exam_Score <- as.numeric(eg_df$Exam_Score)
+
+eg_avg_df <- eg_df %>%
+  group_by(StudentID, Exam_Name) %>%
+  filter(Exam_Score == min(Exam_Score)) %>%
+  group_by(StudentID, M_label) %>%
+  summarise(Avg_Exam_Score = mean(Exam_Score))
+
+eg_M1 <- eg_avg_df %>%
+  filter(M_label == 'M1') %>%
+  select(-M_label) %>%
+  rename(M1_Exam_Avg = Avg_Exam_Score)
+
+eg_M2 <- eg_avg_df %>%
+  filter(M_label == 'M2') %>%
+  select(-M_label) %>%
+  rename(M2_Exam_Avg = Avg_Exam_Score)
+
+eg_Br <- eg_avg_df %>%
+  filter(M_label == 'Br') %>%
+  select(-M_label) %>%
+  rename(Brain_Exam_Avg = Avg_Exam_Score)
+
+student_main <- merge(student_main, eg_M1, by = "StudentID", all.x = TRUE)
+student_main <- merge(student_main, eg_M2, by = "StudentID", all.x = TRUE)
+student_main <- merge(student_main, eg_Br, by = "StudentID", all.x = TRUE)
+
+# shelf exams
+
+shelf_df <- read.csv("course_grades/shelf_exam_scores.csv")
+shelf_df <- rename(shelf_df, StudentID = ï..StudentID)
+
+# average shelf score
+
+shelf_avg_df <- shelf_df %>%
+  group_by(StudentID) %>%
+  summarise(AvgShelfScore = mean(KnowledgeScore))
+
+# OSCE
+
+osce_df <- read.csv("course_grades/osce.csv")
+osce_df <- rename(osce_df, StudentID = ï..StudentID)
+osce_df$ClassCode <- as.factor(osce_df$ClassCode)
+osce_df$GCDivisionRawScore[osce_df$GCDivisionRawScore == 'NULL'] <- NA
+osce_df$GCDivisionRawScore <- as.integer(osce_df$GCDivisionRawScore)
+osce_df <- osce_df[complete.cases(osce_df[,14]),]
+
+osce_df_M1 <- osce_df %>%
+  filter(ClassCode == 'M1')
+
+osce_df_M2 <- osce_df %>%
+  filter(ClassCode == 'M2')
+
+# raw score
+
+osce_M1_avg_df <- osce_df_M1 %>%
+  group_by(StudentID) %>%
+  summarise(AvgM1OSCE = mean(GCDivisionRawScore))
+
+osce_M2_avg_df <- osce_df_M2 %>%
+  group_by(StudentID) %>%
+  summarise(AvgM2OSCE = mean(GCDivisionRawScore))
+
+# merge with main
+
+student_main <- merge(student_main, osce_M1_avg_df, by = "StudentID", all.x = TRUE)
+
+student_main <- merge(student_main, osce_M2_avg_df, by = "StudentID", all.x = TRUE)
+
+student_main <- merge(student_main, shelf_avg_df, by = "StudentID", all.x = TRUE)
+
+write.csv(student_main, file = 'student_main.csv')
