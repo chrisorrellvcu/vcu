@@ -115,6 +115,8 @@ nbme_board_df <- rename(nbme_board_df, StudentID = ï..StudentID)
 
 nbme_prac_df[duplicated(nbme_prac_df$StudentID),]
 
+nbme_prac_df[nbme_prac_df == 'NULL'] <- NA
+
 nbme_board_df[duplicated(nbme_board_df$StudentID),]
 
 # remove CS rows & pull only first attempt
@@ -348,9 +350,9 @@ cg_df$Course_Score <- as.numeric(cg_df$Course_Score)
 
 cg_avg_df <- cg_df %>%
   group_by(StudentID, Course_Name) %>%
-  filter(Course_Score == min(Course_Score)) %>%
+  filter(Course_Score == min(Course_Score, na.rm = TRUE)) %>%
   group_by(StudentID, M_label) %>%
-  summarise(Avg_Course_Score = mean(Course_Score))
+  summarise(Avg_Course_Score = mean(Course_Score, na.rm = TRUE))
 
 cg_M1 <- cg_avg_df %>%
   filter(M_label == 'M1') %>%
@@ -371,16 +373,18 @@ cg_M3 <- cg_M3 %>%
 cg_M3 <- cg_M3 %>% 
   group_by(StudentID) %>%
   summarise(
-    M3_Ambulatory_Division = min(M3_Ambulatory_Division),
-    M3_Family_Medicine_Division = min(M3_Family_Medicine_Division),
-    M3_Internal_Medicine_Division = min(M3_Internal_Medicine_Division),
-    M3_Neurology_Division = min(M3_Neurology_Division),
-    M3_Obstetrics_and_Gynecology_Division = min(M3_Obstetrics_and_Gynecology_Division),
-    M3_Pediatrics_Division = min(M3_Pediatrics_Division),
-    M3_Psychiatry_Division = min(M3_Psychiatry_Division),
-    M3_Surgery_Division = min(M3_Surgery_Division)
+    M3_Ambulatory_Division = min(M3_Ambulatory_Division, na.rm = TRUE),
+    M3_Family_Medicine_Division = min(M3_Family_Medicine_Division, na.rm = TRUE),
+    M3_Internal_Medicine_Division = min(M3_Internal_Medicine_Division, na.rm = TRUE),
+    M3_Neurology_Division = min(M3_Neurology_Division, na.rm = TRUE),
+    M3_Obstetrics_and_Gynecology_Division = min(M3_Obstetrics_and_Gynecology_Division, na.rm = TRUE),
+    M3_Pediatrics_Division = min(M3_Pediatrics_Division, na.rm = TRUE),
+    M3_Psychiatry_Division = min(M3_Psychiatry_Division, na.rm = TRUE),
+    M3_Surgery_Division = min(M3_Surgery_Division, na.rm = TRUE)
   ) %>%
   arrange(StudentID)
+
+cg_M3[cg_M3 == Inf] <- NA
 
 # join with main
 
@@ -502,9 +506,9 @@ eg_df$Exam_Score <- as.numeric(eg_df$Exam_Score)
 
 eg_avg_df <- eg_df %>%
   group_by(StudentID, Exam_Name) %>%
-  filter(Exam_Score == min(Exam_Score)) %>%
+  filter(Exam_Score == min(Exam_Score, na.rm = TRUE)) %>%
   group_by(StudentID, M_label) %>%
-  summarise(Avg_Exam_Score = mean(Exam_Score))
+  summarise(Avg_Exam_Score = mean(Exam_Score, na.rm = TRUE))
 
 eg_M1 <- eg_avg_df %>%
   filter(M_label == 'M1') %>%
@@ -534,7 +538,7 @@ shelf_df <- rename(shelf_df, StudentID = ï..StudentID)
 
 shelf_avg_df <- shelf_df %>%
   group_by(StudentID) %>%
-  summarise(AvgShelfScore = mean(KnowledgeScore))
+  summarise(AvgShelfScore = mean(KnowledgeScore, na.rm = TRUE))
 
 # OSCE
 
@@ -555,11 +559,11 @@ osce_df_M2 <- osce_df %>%
 
 osce_M1_avg_df <- osce_df_M1 %>%
   group_by(StudentID) %>%
-  summarise(AvgM1OSCE = mean(GCDivisionRawScore))
+  summarise(AvgM1OSCE = mean(GCDivisionRawScore, na.rm = TRUE))
 
 osce_M2_avg_df <- osce_df_M2 %>%
   group_by(StudentID) %>%
-  summarise(AvgM2OSCE = mean(GCDivisionRawScore))
+  summarise(AvgM2OSCE = mean(GCDivisionRawScore, na.rm = TRUE))
 
 # merge with main
 
@@ -568,5 +572,7 @@ student_main <- merge(student_main, osce_M1_avg_df, by = "StudentID", all.x = TR
 student_main <- merge(student_main, osce_M2_avg_df, by = "StudentID", all.x = TRUE)
 
 student_main <- merge(student_main, shelf_avg_df, by = "StudentID", all.x = TRUE)
+
+student_main[is.na(student_main)] <-  " "
 
 write.csv(student_main, file = 'student_main.csv')
