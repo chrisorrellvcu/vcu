@@ -573,6 +573,7 @@ student_main <- merge(student_main, osce_M2_avg_df, by = "StudentID", all.x = TR
 
 student_main <- merge(student_main, shelf_avg_df, by = "StudentID", all.x = TRUE)
 
-student_main[is.na(student_main)] <-  " "
+#only need this if using JMP
+#student_main[is.na(student_main)] <-  " "
 
 write.csv(student_main, file = 'student_main.csv')
